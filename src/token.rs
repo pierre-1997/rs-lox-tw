@@ -23,6 +23,7 @@ lazy_static! {
     ]);
 }
 
+#[derive(Debug)]
 pub enum Object {
     Num(f64),
     Str(String),
@@ -31,6 +32,19 @@ pub enum Object {
     False,
 }
 
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Num(x) => write!(f, "{}", x),
+            Self::Str(s) => write!(f, "\"{}\"", s),
+            Self::Nil => write!(f, "null"),
+            Self::True => write!(f, "true"),
+            Self::False => write!(f, "false"),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Token {
     ttype: TokenType,
     lexeme: String,
@@ -51,7 +65,7 @@ impl Token {
     pub fn left_paren() -> Token {
         Token {
             ttype: TokenType::LEFT_PAREN,
-            lexeme: "".to_string(),
+            lexeme: "(".to_string(),
             literal: None,
             line: 0,
         }
@@ -60,7 +74,7 @@ impl Token {
     pub fn right_paren() -> Token {
         Token {
             ttype: TokenType::RIGHT_PAREN,
-            lexeme: "".to_string(),
+            lexeme: ")".to_string(),
             literal: None,
             line: 0,
         }
@@ -69,7 +83,7 @@ impl Token {
     pub fn left_brace() -> Token {
         Token {
             ttype: TokenType::LEFT_BRACE,
-            lexeme: "".to_string(),
+            lexeme: "{".to_string(),
             literal: None,
             line: 0,
         }
@@ -78,7 +92,7 @@ impl Token {
     pub fn right_brace() -> Token {
         Token {
             ttype: TokenType::RIGHT_BRACE,
-            lexeme: "".to_string(),
+            lexeme: "}".to_string(),
             literal: None,
             line: 0,
         }
@@ -87,7 +101,7 @@ impl Token {
     pub fn comma() -> Token {
         Token {
             ttype: TokenType::COMMA,
-            lexeme: "".to_string(),
+            lexeme: ",".to_string(),
             literal: None,
             line: 0,
         }
@@ -96,7 +110,7 @@ impl Token {
     pub fn dot() -> Token {
         Token {
             ttype: TokenType::DOT,
-            lexeme: "".to_string(),
+            lexeme: ".".to_string(),
             literal: None,
             line: 0,
         }
@@ -105,7 +119,7 @@ impl Token {
     pub fn minus() -> Token {
         Token {
             ttype: TokenType::MINUS,
-            lexeme: "".to_string(),
+            lexeme: "-".to_string(),
             literal: None,
             line: 0,
         }
@@ -114,7 +128,7 @@ impl Token {
     pub fn plus() -> Token {
         Token {
             ttype: TokenType::PLUS,
-            lexeme: "".to_string(),
+            lexeme: "+".to_string(),
             literal: None,
             line: 0,
         }
@@ -123,7 +137,7 @@ impl Token {
     pub fn semicolon() -> Token {
         Token {
             ttype: TokenType::SEMICOLON,
-            lexeme: "".to_string(),
+            lexeme: ";".to_string(),
             literal: None,
             line: 0,
         }
@@ -132,7 +146,7 @@ impl Token {
     pub fn star() -> Token {
         Token {
             ttype: TokenType::STAR,
-            lexeme: "".to_string(),
+            lexeme: "*".to_string(),
             literal: None,
             line: 0,
         }
@@ -141,7 +155,7 @@ impl Token {
     pub fn bang() -> Token {
         Token {
             ttype: TokenType::BANG,
-            lexeme: "".to_string(),
+            lexeme: "!".to_string(),
             literal: None,
             line: 0,
         }
@@ -150,7 +164,7 @@ impl Token {
     pub fn bang_equal() -> Token {
         Token {
             ttype: TokenType::BANG_EQUAL,
-            lexeme: "".to_string(),
+            lexeme: "!=".to_string(),
             literal: None,
             line: 0,
         }
@@ -159,7 +173,7 @@ impl Token {
     pub fn equal() -> Token {
         Token {
             ttype: TokenType::EQUAL,
-            lexeme: "".to_string(),
+            lexeme: "=".to_string(),
             literal: None,
             line: 0,
         }
@@ -168,7 +182,7 @@ impl Token {
     pub fn equal_equal() -> Token {
         Token {
             ttype: TokenType::EQUAL_EQUAL,
-            lexeme: "".to_string(),
+            lexeme: "==".to_string(),
             literal: None,
             line: 0,
         }
@@ -177,7 +191,7 @@ impl Token {
     pub fn less() -> Token {
         Token {
             ttype: TokenType::LESS,
-            lexeme: "".to_string(),
+            lexeme: "<".to_string(),
             literal: None,
             line: 0,
         }
@@ -186,7 +200,7 @@ impl Token {
     pub fn less_equal() -> Token {
         Token {
             ttype: TokenType::LESS_EQUAL,
-            lexeme: "".to_string(),
+            lexeme: "<=".to_string(),
             literal: None,
             line: 0,
         }
@@ -195,7 +209,7 @@ impl Token {
     pub fn greater() -> Token {
         Token {
             ttype: TokenType::GREATER,
-            lexeme: "".to_string(),
+            lexeme: ">".to_string(),
             literal: None,
             line: 0,
         }
@@ -204,7 +218,7 @@ impl Token {
     pub fn greater_equal() -> Token {
         Token {
             ttype: TokenType::GREATER_EQUAL,
-            lexeme: "".to_string(),
+            lexeme: ">=".to_string(),
             literal: None,
             line: 0,
         }
@@ -213,7 +227,7 @@ impl Token {
     pub fn slash() -> Token {
         Token {
             ttype: TokenType::SLASH,
-            lexeme: "".to_string(),
+            lexeme: "/".to_string(),
             literal: None,
             line: 0,
         }
@@ -240,7 +254,7 @@ impl Token {
     pub fn or() -> Token {
         Token {
             ttype: TokenType::OR,
-            lexeme: "".to_string(),
+            lexeme: "or".to_string(),
             literal: None,
             line: 0,
         }
@@ -267,6 +281,17 @@ impl Token {
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Type: {:?}", self.ttype)
+        write!(
+            f,
+            "{{type: {:?}, lexeme: {}, literal: {}, line: {}}}",
+            self.ttype,
+            self.lexeme,
+            if let Some(literal) = &self.literal {
+                literal.to_string()
+            } else {
+                "None".to_string()
+            },
+            self.line
+        )
     }
 }

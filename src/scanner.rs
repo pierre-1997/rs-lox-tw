@@ -49,7 +49,7 @@ impl Scanner {
         while !self.is_at_end() {
             self.start = self.current;
 
-            self.scan_tokens()?;
+            self.scan_token()?;
         }
 
         self.tokens.push(Token::eof(self.line));
