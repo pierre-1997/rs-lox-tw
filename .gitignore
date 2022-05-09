@@ -6,3 +6,9 @@
 
 # Rendered HTML
 *.html
+
+# Java book stuff
+/java-*
+
+# Generated automatically during build
+src/expr.rs

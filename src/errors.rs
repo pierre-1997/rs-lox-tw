@@ -23,3 +23,5 @@ impl fmt::Display for ScannerError {
         Ok(())
     }
 }
+
+pub enum ExprError {}
