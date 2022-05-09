@@ -1,0 +1,9 @@
+
+// Comment on first line
+
+a = 3.0;
+b = 5;
+
+if a * b == 15.0 and false == false {
+  variable = 0.0;
+}

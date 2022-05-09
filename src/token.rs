@@ -49,232 +49,268 @@ pub struct Token {
     ttype: TokenType,
     lexeme: String,
     literal: Option<Object>,
-    line: usize,
+    src_line: usize,
+    src_start: usize,
+    src_end: usize,
 }
 
 impl Token {
-    pub fn eof(line: usize) -> Token {
+    pub fn eof(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::EOF,
             lexeme: "".to_string(),
             literal: None,
-            line,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn left_paren() -> Token {
+    pub fn left_paren(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::LEFT_PAREN,
             lexeme: "(".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn right_paren() -> Token {
+    pub fn right_paren(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::RIGHT_PAREN,
             lexeme: ")".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn left_brace() -> Token {
+    pub fn left_brace(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::LEFT_BRACE,
             lexeme: "{".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn right_brace() -> Token {
+    pub fn right_brace(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::RIGHT_BRACE,
             lexeme: "}".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn comma() -> Token {
+    pub fn comma(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::COMMA,
             lexeme: ",".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn dot() -> Token {
+    pub fn dot(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::DOT,
             lexeme: ".".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn minus() -> Token {
+    pub fn minus(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::MINUS,
             lexeme: "-".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn plus() -> Token {
+    pub fn plus(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::PLUS,
             lexeme: "+".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn semicolon() -> Token {
+    pub fn semicolon(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::SEMICOLON,
             lexeme: ";".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn star() -> Token {
+    pub fn star(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::STAR,
             lexeme: "*".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn bang() -> Token {
+    pub fn bang(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::BANG,
             lexeme: "!".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn bang_equal() -> Token {
+    pub fn bang_equal(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::BANG_EQUAL,
             lexeme: "!=".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 2,
         }
     }
 
-    pub fn equal() -> Token {
+    pub fn equal(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::EQUAL,
             lexeme: "=".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn equal_equal() -> Token {
+    pub fn equal_equal(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::EQUAL_EQUAL,
             lexeme: "==".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 2,
         }
     }
 
-    pub fn less() -> Token {
+    pub fn less(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::LESS,
             lexeme: "<".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn less_equal() -> Token {
+    pub fn less_equal(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::LESS_EQUAL,
             lexeme: "<=".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 2,
         }
     }
 
-    pub fn greater() -> Token {
+    pub fn greater(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::GREATER,
             lexeme: ">".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn greater_equal() -> Token {
+    pub fn greater_equal(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::GREATER_EQUAL,
             lexeme: ">=".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 2,
         }
     }
 
-    pub fn slash() -> Token {
+    pub fn slash(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::SLASH,
             lexeme: "/".to_string(),
             literal: None,
-            line: 0,
+            src_line,
+            src_start: src_at,
+            src_end: src_at + 1,
         }
     }
 
-    pub fn string(s: String) -> Token {
+    pub fn string(src_line: usize, src_at: usize, s: &str) -> Token {
         Token {
             ttype: TokenType::STRING,
             lexeme: "".to_string(),
-            literal: Some(Object::Str(s)),
-            line: 0,
+            literal: Some(Object::Str(s.to_string())),
+            src_line,
+            src_start: src_at,
+            src_end: src_at + s.len(),
         }
     }
 
-    pub fn number(n: f64) -> Token {
+    pub fn number(src_line: usize, src_start: usize, src_end: usize, n: f64) -> Token {
         Token {
             ttype: TokenType::NUMBER,
             lexeme: "".to_string(),
             literal: Some(Object::Num(n)),
-            line: 0,
+            src_line,
+            src_start,
+            src_end,
         }
     }
 
-    pub fn or() -> Token {
+    pub fn identifier(
+        src_line: usize,
+        src_start: usize,
+        src_end: usize,
+        ttype: TokenType,
+        l: &str,
+    ) -> Token {
         Token {
-            ttype: TokenType::OR,
-            lexeme: "or".to_string(),
+            ttype,
+            lexeme: l.to_string(),
             literal: None,
-            line: 0,
-        }
-    }
-
-    pub fn identifier() -> Token {
-        Token {
-            ttype: TokenType::IDENTIFIER,
-            lexeme: "".to_string(),
-            literal: None,
-            line: 0,
-        }
-    }
-
-    pub fn from_type(tt: TokenType) -> Token {
-        Token {
-            ttype: tt,
-            lexeme: "".to_string(),
-            literal: None,
-            line: 0,
+            src_line,
+            src_start,
+            src_end,
         }
     }
 }
@@ -291,7 +327,7 @@ impl fmt::Display for Token {
             } else {
                 "None".to_string()
             },
-            self.line
+            self.src_line
         )
     }
 }

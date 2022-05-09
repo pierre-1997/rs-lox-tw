@@ -52,7 +52,7 @@ impl Scanner {
             self.scan_token()?;
         }
 
-        self.tokens.push(Token::eof(self.line));
+        self.tokens.push(Token::eof(self.line, self.current));
 
         Ok(&self.tokens)
     }
@@ -65,44 +65,50 @@ impl Scanner {
         let c = self.advance();
         match c {
             // Single character lexemes
-            '(' => self.tokens.push(Token::left_paren()),
-            ')' => self.tokens.push(Token::right_paren()),
-            '{' => self.tokens.push(Token::left_brace()),
-            '}' => self.tokens.push(Token::right_brace()),
-            ',' => self.tokens.push(Token::comma()),
-            '.' => self.tokens.push(Token::dot()),
-            '-' => self.tokens.push(Token::minus()),
-            '+' => self.tokens.push(Token::plus()),
-            ';' => self.tokens.push(Token::semicolon()),
-            '*' => self.tokens.push(Token::star()),
+            '(' => self.tokens.push(Token::left_paren(self.line, self.current)),
+            ')' => self
+                .tokens
+                .push(Token::right_paren(self.line, self.current)),
+            '{' => self.tokens.push(Token::left_brace(self.line, self.current)),
+            '}' => self
+                .tokens
+                .push(Token::right_brace(self.line, self.current)),
+            ',' => self.tokens.push(Token::comma(self.line, self.current)),
+            '.' => self.tokens.push(Token::dot(self.line, self.current)),
+            '-' => self.tokens.push(Token::minus(self.line, self.current)),
+            '+' => self.tokens.push(Token::plus(self.line, self.current)),
+            ';' => self.tokens.push(Token::semicolon(self.line, self.current)),
+            '*' => self.tokens.push(Token::star(self.line, self.current)),
 
             // Two character lexemes
             '!' => {
                 if self.match_next('=') {
-                    self.tokens.push(Token::bang_equal());
+                    self.tokens.push(Token::bang_equal(self.line, self.current));
                 } else {
-                    self.tokens.push(Token::bang());
+                    self.tokens.push(Token::bang(self.line, self.current));
                 }
             }
             '=' => {
                 if self.match_next('=') {
-                    self.tokens.push(Token::equal_equal());
+                    self.tokens
+                        .push(Token::equal_equal(self.line, self.current));
                 } else {
-                    self.tokens.push(Token::equal());
+                    self.tokens.push(Token::equal(self.line, self.current));
                 }
             }
             '<' => {
                 if self.match_next('=') {
-                    self.tokens.push(Token::less_equal());
+                    self.tokens.push(Token::less_equal(self.line, self.current));
                 } else {
-                    self.tokens.push(Token::less());
+                    self.tokens.push(Token::less(self.line, self.current));
                 }
             }
             '>' => {
                 if self.match_next('=') {
-                    self.tokens.push(Token::greater_equal());
+                    self.tokens
+                        .push(Token::greater_equal(self.line, self.current));
                 } else {
-                    self.tokens.push(Token::greater());
+                    self.tokens.push(Token::greater(self.line, self.current));
                 }
             }
 
@@ -113,7 +119,7 @@ impl Scanner {
                         self.advance();
                     }
                 } else {
-                    self.tokens.push(Token::slash());
+                    self.tokens.push(Token::slash(self.line, self.current));
                 }
             }
 
@@ -200,7 +206,8 @@ impl Scanner {
 
         let token_str = self.source.get(self.start + 1..self.current - 1).unwrap();
 
-        self.tokens.push(Token::string(token_str.to_string()));
+        self.tokens
+            .push(Token::string(self.line, self.current, token_str));
 
         Ok(())
     }
@@ -219,8 +226,11 @@ impl Scanner {
         }
 
         self.tokens.push(Token::number(
+            self.line,
+            self.start,
+            self.current,
             self.source
-                .get(self.start + 1..self.current - 1)
+                .get(self.start..self.current)
                 .unwrap()
                 .parse::<f64>()
                 .ok()
@@ -238,8 +248,16 @@ impl Scanner {
         let substr = self.source.get(self.start..self.current).unwrap();
 
         let token = match RESERVED_IDENTIFIERS.get(substr) {
-            Some(&token_type) => Token::from_type(token_type),
-            None => Token::identifier(),
+            Some(&token_type) => {
+                Token::identifier(self.line, self.start, self.current, token_type, substr)
+            }
+            None => Token::identifier(
+                self.line,
+                self.start,
+                self.current,
+                TokenType::IDENTIFIER,
+                substr,
+            ),
         };
 
         self.tokens.push(token);

@@ -1,1 +1,8 @@
+# Compiled stuff
 /target
+
+# Resources folder (because of lack of ownership)
+/resources
+
+# Rendered HTML
+*.html
