@@ -23,7 +23,7 @@ lazy_static! {
     ]);
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Object {
     Num(f64),
     Str(String),
@@ -37,7 +37,7 @@ impl fmt::Display for Object {
         match self {
             Self::Num(x) => write!(f, "{}", x),
             Self::Str(s) => write!(f, "\"{}\"", s),
-            Self::Nil => write!(f, "null"),
+            Self::Nil => write!(f, "nil"),
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
         }
@@ -47,7 +47,7 @@ impl fmt::Display for Object {
 #[derive(Debug)]
 pub struct Token {
     ttype: TokenType,
-    lexeme: String,
+    pub lexeme: String,
     literal: Option<Object>,
     src_line: usize,
     src_start: usize,
