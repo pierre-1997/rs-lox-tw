@@ -5,11 +5,8 @@ mod scanner;
 mod token;
 mod token_type;
 
-use ast_printer::AstPrinter;
-use expr::*;
 use scanner::*;
 use std::io::{self, Write};
-use token::{Object, Token};
 
 use std::{env, fs};
 

@@ -7,22 +7,22 @@ use crate::token_type::*;
 use lazy_static::lazy_static;
 lazy_static! {
     static ref RESERVED_IDENTIFIERS: HashMap<String, TokenType> = HashMap::from([
-        ("and".to_string(), TokenType::AND),
-        ("class".to_string(), TokenType::CLASS),
-        ("else".to_string(), TokenType::ELSE),
-        ("false".to_string(), TokenType::FALSE),
-        ("for".to_string(), TokenType::FOR),
-        ("fun".to_string(), TokenType::FUN),
-        ("if".to_string(), TokenType::IF),
-        ("nil".to_string(), TokenType::NIL),
-        ("or".to_string(), TokenType::OR),
-        ("print".to_string(), TokenType::PRINT),
-        ("return".to_string(), TokenType::RETURN),
-        ("super".to_string(), TokenType::SUPER),
-        ("this".to_string(), TokenType::THIS),
-        ("true".to_string(), TokenType::TRUE),
-        ("var".to_string(), TokenType::VAR),
-        ("while".to_string(), TokenType::WHILE),
+        ("and".to_string(), TokenType::And),
+        ("class".to_string(), TokenType::Class),
+        ("else".to_string(), TokenType::Else),
+        ("false".to_string(), TokenType::False),
+        ("for".to_string(), TokenType::For),
+        ("fun".to_string(), TokenType::Fun),
+        ("if".to_string(), TokenType::If),
+        ("nil".to_string(), TokenType::Nil),
+        ("or".to_string(), TokenType::Or),
+        ("print".to_string(), TokenType::Print),
+        ("return".to_string(), TokenType::Return),
+        ("super".to_string(), TokenType::Super),
+        ("this".to_string(), TokenType::This),
+        ("true".to_string(), TokenType::True),
+        ("var".to_string(), TokenType::Var),
+        ("while".to_string(), TokenType::While),
     ]);
 }
 
@@ -255,7 +255,7 @@ impl Scanner {
                 self.line,
                 self.start,
                 self.current,
-                TokenType::IDENTIFIER,
+                TokenType::Identifier,
                 substr,
             ),
         };

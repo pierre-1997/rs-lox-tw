@@ -1,6 +1,5 @@
 use crate::errors::ExprError;
 use crate::expr::*;
-use crate::token::{Object, Token};
 
 pub struct AstPrinter;
 
@@ -9,7 +8,7 @@ impl AstPrinter {
         expr.accept(self)
     }
 
-    pub fn parenthesize(&self, name: &str, exprs: &[&Box<Expr>]) -> Result<String, ExprError> {
+    pub fn parenthesize(&self, name: &str, exprs: &[&Expr]) -> Result<String, ExprError> {
         let mut ret = String::new();
 
         // Open parenthesis + name

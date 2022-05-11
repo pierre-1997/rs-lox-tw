@@ -1,27 +1,8 @@
 use crate::token_type::*;
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use lazy_static::lazy_static;
-lazy_static! {
-    static ref RESERVED_IDENTIFIERS: HashMap<String, TokenType> = HashMap::from([
-        ("and".to_string(), TokenType::AND),
-        ("class".to_string(), TokenType::CLASS),
-        ("else".to_string(), TokenType::ELSE),
-        ("false".to_string(), TokenType::FALSE),
-        ("for".to_string(), TokenType::FOR),
-        ("fun".to_string(), TokenType::FUN),
-        ("if".to_string(), TokenType::IF),
-        ("nil".to_string(), TokenType::NIL),
-        ("or".to_string(), TokenType::OR),
-        ("print".to_string(), TokenType::PRINT),
-        ("return".to_string(), TokenType::RETURN),
-        ("super".to_string(), TokenType::SUPER),
-        ("this".to_string(), TokenType::THIS),
-        ("true".to_string(), TokenType::TRUE),
-        ("var".to_string(), TokenType::VAR),
-        ("while".to_string(), TokenType::WHILE),
-    ]);
-}
+lazy_static! {}
 
 #[derive(Debug, PartialEq)]
 pub enum Object {
@@ -57,7 +38,7 @@ pub struct Token {
 impl Token {
     pub fn eof(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::EOF,
+            ttype: TokenType::Eof,
             lexeme: "".to_string(),
             literal: None,
             src_line,
@@ -68,7 +49,7 @@ impl Token {
 
     pub fn left_paren(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::LEFT_PAREN,
+            ttype: TokenType::LeftParen,
             lexeme: "(".to_string(),
             literal: None,
             src_line,
@@ -79,7 +60,7 @@ impl Token {
 
     pub fn right_paren(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::RIGHT_PAREN,
+            ttype: TokenType::RightParen,
             lexeme: ")".to_string(),
             literal: None,
             src_line,
@@ -90,7 +71,7 @@ impl Token {
 
     pub fn left_brace(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::LEFT_BRACE,
+            ttype: TokenType::LeftBrace,
             lexeme: "{".to_string(),
             literal: None,
             src_line,
@@ -101,7 +82,7 @@ impl Token {
 
     pub fn right_brace(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::RIGHT_BRACE,
+            ttype: TokenType::RightBrace,
             lexeme: "}".to_string(),
             literal: None,
             src_line,
@@ -112,7 +93,7 @@ impl Token {
 
     pub fn comma(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::COMMA,
+            ttype: TokenType::Comma,
             lexeme: ",".to_string(),
             literal: None,
             src_line,
@@ -123,7 +104,7 @@ impl Token {
 
     pub fn dot(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::DOT,
+            ttype: TokenType::Dot,
             lexeme: ".".to_string(),
             literal: None,
             src_line,
@@ -134,7 +115,7 @@ impl Token {
 
     pub fn minus(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::MINUS,
+            ttype: TokenType::Minus,
             lexeme: "-".to_string(),
             literal: None,
             src_line,
@@ -145,7 +126,7 @@ impl Token {
 
     pub fn plus(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::PLUS,
+            ttype: TokenType::Plus,
             lexeme: "+".to_string(),
             literal: None,
             src_line,
@@ -156,7 +137,7 @@ impl Token {
 
     pub fn semicolon(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::SEMICOLON,
+            ttype: TokenType::Semicolon,
             lexeme: ";".to_string(),
             literal: None,
             src_line,
@@ -167,7 +148,7 @@ impl Token {
 
     pub fn star(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::STAR,
+            ttype: TokenType::Star,
             lexeme: "*".to_string(),
             literal: None,
             src_line,
@@ -178,7 +159,7 @@ impl Token {
 
     pub fn bang(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::BANG,
+            ttype: TokenType::Bang,
             lexeme: "!".to_string(),
             literal: None,
             src_line,
@@ -189,7 +170,7 @@ impl Token {
 
     pub fn bang_equal(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::BANG_EQUAL,
+            ttype: TokenType::BangEqual,
             lexeme: "!=".to_string(),
             literal: None,
             src_line,
@@ -200,7 +181,7 @@ impl Token {
 
     pub fn equal(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::EQUAL,
+            ttype: TokenType::Equal,
             lexeme: "=".to_string(),
             literal: None,
             src_line,
@@ -211,7 +192,7 @@ impl Token {
 
     pub fn equal_equal(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::EQUAL_EQUAL,
+            ttype: TokenType::EqualEqual,
             lexeme: "==".to_string(),
             literal: None,
             src_line,
@@ -222,7 +203,7 @@ impl Token {
 
     pub fn less(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::LESS,
+            ttype: TokenType::Less,
             lexeme: "<".to_string(),
             literal: None,
             src_line,
@@ -233,7 +214,7 @@ impl Token {
 
     pub fn less_equal(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::LESS_EQUAL,
+            ttype: TokenType::LessEqual,
             lexeme: "<=".to_string(),
             literal: None,
             src_line,
@@ -244,7 +225,7 @@ impl Token {
 
     pub fn greater(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::GREATER,
+            ttype: TokenType::Greater,
             lexeme: ">".to_string(),
             literal: None,
             src_line,
@@ -255,7 +236,7 @@ impl Token {
 
     pub fn greater_equal(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::GREATER_EQUAL,
+            ttype: TokenType::GreaterEqual,
             lexeme: ">=".to_string(),
             literal: None,
             src_line,
@@ -266,7 +247,7 @@ impl Token {
 
     pub fn slash(src_line: usize, src_at: usize) -> Token {
         Token {
-            ttype: TokenType::SLASH,
+            ttype: TokenType::Slash,
             lexeme: "/".to_string(),
             literal: None,
             src_line,
@@ -277,7 +258,7 @@ impl Token {
 
     pub fn string(src_line: usize, src_at: usize, s: &str) -> Token {
         Token {
-            ttype: TokenType::STRING,
+            ttype: TokenType::String,
             lexeme: "".to_string(),
             literal: Some(Object::Str(s.to_string())),
             src_line,
@@ -288,7 +269,7 @@ impl Token {
 
     pub fn number(src_line: usize, src_start: usize, src_end: usize, n: f64) -> Token {
         Token {
-            ttype: TokenType::NUMBER,
+            ttype: TokenType::Number,
             lexeme: "".to_string(),
             literal: Some(Object::Num(n)),
             src_line,

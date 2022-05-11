@@ -5,6 +5,7 @@ pub enum ScannerError {
     UnterminatedString,
 }
 
+/*
 pub fn error(line: usize, msg: String) {
     report(line, "".to_string(), msg);
 }
@@ -12,6 +13,7 @@ pub fn error(line: usize, msg: String) {
 pub fn report(line: usize, location: String, msg: String) {
     eprintln!("[line {}] Error {}: {}", line, location, msg);
 }
+*/
 
 impl fmt::Display for ScannerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
