@@ -64,3 +64,6 @@ impl fmt::Display for ParserError {
 }
 
 pub enum RunError {}
+
+#[derive(Debug)]
+pub enum StmtError {}

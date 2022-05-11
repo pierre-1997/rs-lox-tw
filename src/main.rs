@@ -62,7 +62,7 @@ pub fn run(source: String) {
         let mut parser = Parser::new(tokens);
 
         match parser.parse() {
-            Some(expr) => {
+            Ok(stmts) => {
                 /*
                 if let Ok(printed) = printer.print(&expr) {
                     println!("AST Printer:\n{}", printed);
@@ -70,10 +70,10 @@ pub fn run(source: String) {
                     println!("Unable to parse with LST.");
                 }
                 */
-                interpreter.interpret(&expr);
+                interpreter.interpret(&stmts);
             }
-            None => {
-                eprintln!("There was an error.")
+            Err(e) => {
+                eprintln!("There was an error: {}", e)
             }
         }
     }

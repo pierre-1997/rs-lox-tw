@@ -1,5 +1,7 @@
 use crate::errors::ExprError;
+use crate::errors::StmtError;
 use crate::expr::*;
+use crate::stmt::*;
 use crate::token::Object;
 use crate::token_type::TokenType;
 
@@ -152,6 +154,24 @@ impl ExprVisitor<Object> for Interpreter {
     }
 }
 
+impl StmtVisitor<()> for Interpreter {
+    fn visit_expression_stmt(&self, stmt: &ExpressionStmt) -> Result<(), StmtError> {
+        if let Err(e) = self.evaluate(&stmt.expression) {
+            println!("{}", e);
+        }
+
+        Ok(())
+    }
+
+    fn visit_print_stmt(&self, stmt: &PrintStmt) -> Result<(), StmtError> {
+        if let Ok(value) = self.evaluate(&stmt.expression) {
+            println!("{}", value);
+        }
+
+        Ok(())
+    }
+}
+
 impl Interpreter {
     pub fn evaluate(&self, expr: &Expr) -> Result<Object, ExprError> {
         expr.accept(self)
@@ -161,14 +181,26 @@ impl Interpreter {
         !(obj == Object::Nil || obj == Object::False)
     }
 
-    pub fn interpret(&self, expr: &Expr) {
-        match self.evaluate(expr) {
-            Ok(obj) => {
-                println!("Final result: {}", obj);
+    pub fn interpret(&self, statements: &[Stmt]) {
+        for statement in statements {
+            self.execute(statement);
+            /*
+            {
+                Ok(obj) => {
+                    println!("Final result: {}", obj);
+                }
+                Err(e) => {
+                    eprintln!("{}", e);
+                }
             }
-            Err(e) => {
-                eprintln!("{}", e);
-            }
+            */
+        }
+    }
+
+    pub fn execute(&self, stmt: &Stmt) {
+        match stmt.accept(self) {
+            Ok(_) => (),
+            Err(e) => println!("{:?}", e),
         }
     }
 }

@@ -29,7 +29,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     let mut file = File::create(output_dir.to_owned() + "/" + &base_name.to_lowercase() + ".rs")?;
 
     // Imports
-    file.write_all(b"use crate::errors::ExprError;\n")?;
+    file.write_all(format!("use crate::errors::{}Error;\n", base_name).as_bytes())?;
     if base_name == "Stmt" {
         file.write_all(b"use crate::expr::Expr;\n\n")?
     } else if base_name == "Expr" {
@@ -43,13 +43,17 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
         .map(|s| s.split(':').collect::<Vec<&str>>()[0].trim())
         .collect::<Vec<&str>>()
     {
-        file.write_all(format!("    {}({}Expr),\n", ttype, ttype).as_bytes())?;
+        file.write_all(format!("    {}({}{}),\n", ttype, ttype, base_name).as_bytes())?;
     }
     file.write_all(b"}\n\n")?;
 
     file.write_all(format!("impl {} {{\n", base_name).as_bytes())?;
     file.write_all(
-        b"    pub fn accept<T>(&self, visitor: &dyn ExprVisitor<T>) -> Result<T, ExprError> {\n",
+        format!(
+            "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, {}Error> {{\n",
+            base_name, base_name
+        )
+        .as_bytes(),
     )?;
     file.write_all(b"        match self {\n")?;
     for ttype in &types
@@ -78,7 +82,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
         let ttype = splitted[0].trim();
         let args = splitted[1].trim();
 
-        file.write_all(format!("pub struct {}Expr {{\n", ttype).as_bytes())?;
+        file.write_all(format!("pub struct {}{} {{\n", ttype, base_name).as_bytes())?;
         for arg in args
             .split(',')
             .collect::<Vec<&str>>()
@@ -95,8 +99,8 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
         file.write_all(b"}\n\n")?;
     }
 
-    // Define the ExprVisitor trait
-    file.write_all(b"pub trait ExprVisitor<T> {\n")?;
+    // Define the {base_name}Visitor trait
+    file.write_all(format!("pub trait {}Visitor<T> {{\n", base_name).as_bytes())?;
     for ttype in &types
         .iter()
         .map(|s| s.split(':').collect::<Vec<&str>>()[0].trim())
@@ -104,29 +108,38 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     {
         file.write_all(
             format!(
-                "    fn visit_{}_expr(&self, expr: &{}Expr) -> Result<T, ExprError>;\n",
+                "    fn visit_{}_{}(&self, {}: &{}{}) -> Result<T, {}Error>;\n",
                 ttype.to_lowercase(),
-                ttype
+                base_name.to_lowercase(),
+                base_name.to_lowercase(),
+                ttype,
+                base_name,
+                base_name,
             )
             .as_bytes(),
         )?;
     }
     file.write_all(b"}")?;
 
-    // Implement each <Type>Expr.accept() function
+    // Implement each <Type>{base_name}.accept() function
     for ttype in &types
         .iter()
         .map(|s| s.split(':').collect::<Vec<&str>>()[0].trim())
         .collect::<Vec<&str>>()
     {
-        file.write_all(format!("\n\nimpl {}Expr {{\n", ttype).as_bytes())?;
+        file.write_all(format!("\n\nimpl {}{} {{\n", ttype, base_name).as_bytes())?;
         file.write_all(
-            b"    pub fn accept<T>(&self, visitor: &dyn ExprVisitor<T>) -> Result<T, ExprError> {\n",
+            format!(
+                "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, {}Error> {{\n",
+                base_name, base_name
+            )
+            .as_bytes(),
         )?;
         file.write_all(
             format!(
-                "        visitor.visit_{}_expr(self)\n",
-                ttype.to_lowercase()
+                "        visitor.visit_{}_{}(self)\n",
+                ttype.to_lowercase(),
+                base_name.to_lowercase()
             )
             .as_bytes(),
         )?;
