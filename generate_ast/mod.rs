@@ -4,25 +4,39 @@ use std::io::prelude::*;
 pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
     define_ast(
         output_dir,
-        "expr",
+        "Expr",
         vec![
             "Binary   : Box<Expr> left, Token operator, Box<Expr> right".to_string(),
             "Unary    : Token operator, Box<Expr> right".to_string(),
             "Grouping : Box<Expr> expression".to_string(),
             "Literal  : Option<Object> value".to_string(),
         ],
-    )
+    )?;
+
+    define_ast(
+        output_dir,
+        "Stmt",
+        vec![
+            "Expression : Expr expression".to_string(),
+            "Print      : Expr expression".to_string(),
+        ],
+    )?;
+
+    Ok(())
 }
 
 fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io::Result<()> {
-    let mut file = File::create(output_dir.to_owned() + "/" + base_name + ".rs")?;
+    let mut file = File::create(output_dir.to_owned() + "/" + &base_name.to_lowercase() + ".rs")?;
 
     // Imports
     file.write_all(b"use crate::errors::ExprError;\n")?;
+    if base_name == "Stmt" {
+        file.write_all(b"use crate::expr::Expr;\n")?
+    }
     file.write_all(b"use crate::token::{Object, Token};\n\n")?;
 
     // Define Expr enum
-    file.write_all(b"pub enum Expr {\n")?;
+    file.write_all(format!("pub enum {} {{\n", base_name).as_bytes())?;
     for ttype in &types
         .iter()
         .map(|s| s.split(':').collect::<Vec<&str>>()[0].trim())
@@ -32,7 +46,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     }
     file.write_all(b"}\n\n")?;
 
-    file.write_all(b"impl Expr {\n")?;
+    file.write_all(format!("impl {} {{\n", base_name).as_bytes())?;
     file.write_all(
         b"    pub fn accept<T>(&self, visitor: &dyn ExprVisitor<T>) -> Result<T, ExprError> {\n",
     )?;
@@ -44,7 +58,8 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     {
         file.write_all(
             format!(
-                "            Expr::{}({}e) => {}e.accept(visitor),\n",
+                "            {}::{}({}e) => {}e.accept(visitor),\n",
+                base_name,
                 ttype,
                 ttype.chars().next().unwrap().to_lowercase(),
                 ttype.chars().next().unwrap().to_lowercase()

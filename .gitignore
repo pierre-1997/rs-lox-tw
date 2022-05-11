@@ -12,3 +12,4 @@
 
 # Generated automatically during build
 src/expr.rs
+src/stmt.rs

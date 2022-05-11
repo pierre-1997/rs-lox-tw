@@ -4,6 +4,7 @@ use ast_printer::AstPrinter;
 mod errors;
 
 mod expr;
+mod stmt;
 
 mod interpreter;
 use interpreter::Interpreter;
