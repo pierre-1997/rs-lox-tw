@@ -14,7 +14,6 @@ use parser::Parser;
 
 mod scanner;
 use scanner::*;
-use token::Object;
 
 mod token;
 mod token_type;

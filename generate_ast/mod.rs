@@ -31,9 +31,10 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     // Imports
     file.write_all(b"use crate::errors::ExprError;\n")?;
     if base_name == "Stmt" {
-        file.write_all(b"use crate::expr::Expr;\n")?
+        file.write_all(b"use crate::expr::Expr;\n\n")?
+    } else if base_name == "Expr" {
+        file.write_all(b"use crate::token::{Object, Token};\n\n")?;
     }
-    file.write_all(b"use crate::token::{Object, Token};\n\n")?;
 
     // Define Expr enum
     file.write_all(format!("pub enum {} {{\n", base_name).as_bytes())?;

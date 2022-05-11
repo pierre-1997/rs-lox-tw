@@ -130,7 +130,7 @@ impl ExprVisitor<Object> for Interpreter {
             }
 
             //Handle '<='
-            TokenType::Greater => {
+            TokenType::LessEqual => {
                 if let Object::Num(left) = left {
                     if let Object::Num(right) = right {
                         return Ok(Object::from(left <= right));
