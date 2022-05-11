@@ -1,105 +1,106 @@
 use std::fmt;
 
-pub enum ScannerError {
-    InvalidCharacter,
-    UnterminatedString,
-}
+use crate::token::Token;
 
-/*
-pub fn error(line: usize, msg: String) {
-    report(line, "".to_string(), msg);
-}
-
-pub fn report(line: usize, location: String, msg: String) {
-    eprintln!("[line {}] Error {}: {}", line, location, msg);
-}
-*/
-
-impl fmt::Display for ScannerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ScannerError::InvalidCharacter => write!(f, "Invalid character.")?,
-            ScannerError::UnterminatedString => write!(f, "Encountered an unterminated string.")?,
-        }
-
-        Ok(())
-    }
-}
-
-pub enum ExprError {
+pub enum RuntimeErrorType {
     UnreachableCode,
-    InvalidExpression,
     ExpectedNumberOperand,
     ExpectedNumberOperands,
     ExpectedAddableOperands,
 }
-
-impl From<EnvironmentError> for ExprError {
-    fn from(ee: EnvironmentError) -> Self {
-        match ee {
-            EnvironmentError::UnknownVariable => Self::InvalidExpression,
-        }
-    }
+pub enum ScannerErrorType {
+    InvalidCharacter,
+    UnterminatedString,
 }
 
-impl From<StmtError> for ExprError {
-    fn from(_: StmtError) -> Self {
-        Self::InvalidExpression
-    }
-}
-
-impl fmt::Display for ExprError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ExprError::UnreachableCode => write!(f, "Unreachable code."),
-            ExprError::InvalidExpression => write!(f, "Invalid expression."),
-            ExprError::ExpectedNumberOperand => write!(f, "Operand must be a number."),
-            ExprError::ExpectedNumberOperands => write!(f, "Both operands must be a number."),
-
-            ExprError::ExpectedAddableOperands => {
-                write!(f, "Operands must be two numbers or two strings.")
-            }
-        }
-    }
-}
-
-pub enum ParserError {
+pub enum ParserErrorType {
     ExpectedExpression,
     InvalidConsumeType,
     ExpectedEqual,
 }
 
-impl fmt::Display for ParserError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParserError::InvalidConsumeType => write!(f, "consume() invalid type"),
-            ParserError::ExpectedExpression => write!(f, "Expected expression."),
-            ParserError::ExpectedEqual => write!(f, "Expected equal there."),
-        }
-    }
-}
-
-pub enum RunError {}
-
-#[derive(Debug)]
-pub enum StmtError {
-    GenericStmtError,
-}
-
-impl From<ExprError> for StmtError {
-    fn from(_: ExprError) -> Self {
-        Self::GenericStmtError
-    }
-}
-
-pub enum EnvironmentError {
+pub enum EnvironmentErrorType {
     UnknownVariable,
 }
 
-impl fmt::Display for EnvironmentError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+pub enum LoxError {
+    ParserError {
+        token: Token,
+        error_type: ParserErrorType,
+        msg: String,
+    },
+    RuntimeError {
+        error_type: RuntimeErrorType,
+    },
+    ScannerError {
+        c: char,
+        error_type: ScannerErrorType,
+    },
+    EnvironmentError {
+        error_type: EnvironmentErrorType,
+    },
+}
+
+impl LoxError {
+    /*
+    pub fn error() -> Self{
+        report(line, "".to_string(), msg);
+    }
+
+    pub fn report(line: usize, location: String, msg: String) -> Self{
+        eprintln!("[line {}] Error {}: {}", line, location, msg);
+    }
+    */
+}
+
+impl fmt::Display for LoxError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            EnvironmentError::UnknownVariable => write!(f, "Undefined variable."),
+            LoxError::ScannerError { c, error_type } => match error_type {
+                ScannerErrorType::InvalidCharacter => write!(f, "Invalid character {c}.")?,
+                ScannerErrorType::UnterminatedString => {
+                    write!(f, "Encountered an unterminated string.")?
+                }
+            },
+
+            // Parser error
+            LoxError::ParserError {
+                token,
+                error_type,
+                msg,
+            } => match error_type {
+                ParserErrorType::InvalidConsumeType => {
+                    writeln!(f, "Error at token [{}]", token)?;
+                    writeln!(f, "{}", msg)?;
+                }
+                ParserErrorType::ExpectedExpression => {
+                    writeln!(f, "Error at token [{}]", token)?;
+                    writeln!(f, "Expected expression.")?;
+                }
+                ParserErrorType::ExpectedEqual => {
+                    writeln!(f, "Error at token [{}]", token)?;
+                    write!(f, "Expected equal there.")?;
+                }
+            },
+
+            // Runtime error
+            LoxError::RuntimeError { error_type } => match error_type {
+                RuntimeErrorType::UnreachableCode => {
+                    writeln!(f, "This code is unreachable.")?;
+                }
+                RuntimeErrorType::ExpectedNumberOperand => write!(f, "Operand must be a number.")?,
+                RuntimeErrorType::ExpectedNumberOperands => {
+                    write!(f, "Both operands must be a number.")?
+                }
+
+                RuntimeErrorType::ExpectedAddableOperands => {
+                    write!(f, "Operands must be two numbers or two strings.")?
+                }
+            },
+
+            _ => write!(f, "Unhandled error yet.")?,
         }
+
+        Ok(())
     }
 }

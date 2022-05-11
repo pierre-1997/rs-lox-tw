@@ -1,4 +1,4 @@
-use crate::errors::EnvironmentError;
+use crate::errors::{EnvironmentErrorType, LoxError};
 use crate::token::{Object, Token};
 
 use std::collections::HashMap;
@@ -18,10 +18,12 @@ impl Environment {
         self.values.insert(name, obj);
     }
 
-    pub fn get(&self, name: Token) -> Result<Object, EnvironmentError> {
+    pub fn get(&self, name: Token) -> Result<Object, LoxError> {
         match self.values.get(&name.lexeme) {
             Some(v) => Ok(v.clone()),
-            None => Err(EnvironmentError::UnknownVariable),
+            None => Err(LoxError::EnvironmentError {
+                error_type: EnvironmentErrorType::UnknownVariable,
+            }),
         }
     }
 }

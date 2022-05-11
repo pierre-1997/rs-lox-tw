@@ -1,4 +1,4 @@
-use crate::errors::ParserError;
+use crate::errors::{LoxError, ParserErrorType};
 use crate::expr::*;
 use crate::stmt::*;
 use crate::token::{Object, Token};
@@ -14,7 +14,7 @@ impl<'a> Parser<'a> {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, ParserError> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, LoxError> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
@@ -24,7 +24,7 @@ impl<'a> Parser<'a> {
                     None => {}
                 },
                 Err(e) => {
-                    eprintln!("{e}");
+                    return Err(e);
                 }
             }
         }
@@ -32,7 +32,7 @@ impl<'a> Parser<'a> {
         Ok(statements)
     }
 
-    fn declaration(&mut self) -> Result<Option<Stmt>, ParserError> {
+    fn declaration(&mut self) -> Result<Option<Stmt>, LoxError> {
         if self.matchs_next(&[TokenType::Var]) {
             match self.var_declaration() {
                 Ok(s) => {
@@ -40,7 +40,7 @@ impl<'a> Parser<'a> {
                 }
                 Err(e) => {
                     eprintln!("{e}");
-                    self.synchronise();
+                    self.synchronize();
                 }
             }
         }
@@ -50,27 +50,23 @@ impl<'a> Parser<'a> {
                 return Ok(Some(s));
             }
             Err(e) => {
-                println!("{e}");
-                self.synchronise();
+                eprintln!("{e}");
+                self.synchronize();
             }
         }
 
         Ok(None)
     }
 
-    fn var_declaration(&mut self) -> Result<Stmt, ParserError> {
+    fn var_declaration(&mut self) -> Result<Stmt, LoxError> {
         // Expect an indentifier as the variable name.
         let name = self.consume(TokenType::Identifier, "Expected variable name.")?;
 
         // If we have an '=' after the variable name, means we should then find a value
-        if self.matchs_next(&[TokenType::Equal]) {
-            // Parse the value and return an initialized VarStmt
-            let initializer = self.expression()?;
-            return Ok(Stmt::Var(VarStmt {
-                name,
-                initializer: Some(initializer),
-            }));
-        }
+        let initializer = match self.matchs_next(&[TokenType::Equal]) {
+            true => Some(self.expression()?),
+            false => None,
+        };
 
         // Check if we got an ending ';' after the variable declaration
         self.consume(
@@ -79,13 +75,10 @@ impl<'a> Parser<'a> {
         )?;
 
         // Return a non-initialized VarStmt
-        Ok(Stmt::Var(VarStmt {
-            name,
-            initializer: None,
-        }))
+        Ok(Stmt::Var(VarStmt { name, initializer }))
     }
 
-    fn statement(&mut self) -> Result<Stmt, ParserError> {
+    fn statement(&mut self) -> Result<Stmt, LoxError> {
         if self.matchs_next(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -93,24 +86,24 @@ impl<'a> Parser<'a> {
         self.expression_statement()
     }
 
-    fn print_statement(&mut self) -> Result<Stmt, ParserError> {
+    fn print_statement(&mut self) -> Result<Stmt, LoxError> {
         let value = self.expression()?;
         self.consume(TokenType::Semicolon, "Expected ';' after value.")?;
 
         Ok(Stmt::Print(PrintStmt { expression: value }))
     }
 
-    fn expression_statement(&mut self) -> Result<Stmt, ParserError> {
+    fn expression_statement(&mut self) -> Result<Stmt, LoxError> {
         let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expected ';' after expression.")?;
         Ok(Stmt::Expression(ExpressionStmt { expression: expr }))
     }
 
-    fn expression(&mut self) -> Result<Expr, ParserError> {
+    fn expression(&mut self) -> Result<Expr, LoxError> {
         self.equality()
     }
 
-    fn equality(&mut self) -> Result<Expr, ParserError> {
+    fn equality(&mut self) -> Result<Expr, LoxError> {
         let mut expr = self.comparison()?;
 
         while self.matchs_next(&[TokenType::BangEqual, TokenType::EqualEqual]) {
@@ -127,7 +120,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> Result<Expr, ParserError> {
+    fn comparison(&mut self) -> Result<Expr, LoxError> {
         let mut expr = self.term()?;
 
         while self.matchs_next(&[
@@ -149,7 +142,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn term(&mut self) -> Result<Expr, ParserError> {
+    fn term(&mut self) -> Result<Expr, LoxError> {
         let mut expr = self.factor()?;
 
         while self.matchs_next(&[TokenType::Minus, TokenType::Plus]) {
@@ -166,7 +159,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn factor(&mut self) -> Result<Expr, ParserError> {
+    fn factor(&mut self) -> Result<Expr, LoxError> {
         let mut expr = self.unary()?;
 
         while self.matchs_next(&[TokenType::Slash, TokenType::Star]) {
@@ -183,7 +176,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn unary(&mut self) -> Result<Expr, ParserError> {
+    fn unary(&mut self) -> Result<Expr, LoxError> {
         if self.matchs_next(&[TokenType::Bang, TokenType::Minus]) {
             let operator = self.previous();
             let right = self.unary()?;
@@ -197,7 +190,7 @@ impl<'a> Parser<'a> {
         self.primary()
     }
 
-    fn primary(&mut self) -> Result<Expr, ParserError> {
+    fn primary(&mut self) -> Result<Expr, LoxError> {
         if self.matchs_next(&[TokenType::False]) {
             return Ok(Expr::Literal(LiteralExpr {
                 value: Some(Object::False),
@@ -236,16 +229,23 @@ impl<'a> Parser<'a> {
             }));
         }
 
-        Err(ParserError::ExpectedExpression)
+        Err(LoxError::ParserError {
+            token: self.tokens[self.current].dup(),
+            error_type: ParserErrorType::ExpectedExpression,
+            msg: "".to_string(),
+        })
     }
 
-    fn consume(&mut self, ttype: TokenType, msg: &str) -> Result<Token, ParserError> {
+    fn consume(&mut self, ttype: TokenType, msg: &str) -> Result<Token, LoxError> {
         if self.check(ttype) {
             return Ok(self.advance());
         }
 
-        eprintln!("Consume error: {}", msg);
-        Err(ParserError::InvalidConsumeType)
+        Err(LoxError::ParserError {
+            token: self.tokens[self.current].dup(),
+            error_type: ParserErrorType::InvalidConsumeType,
+            msg: msg.to_string(),
+        })
     }
 
     fn matchs_next(&mut self, types: &[TokenType]) -> bool {
@@ -287,7 +287,7 @@ impl<'a> Parser<'a> {
         self.tokens[self.current - 1].dup()
     }
 
-    fn synchronise(&mut self) {
+    fn synchronize(&mut self) {
         self.advance();
 
         while !self.is_at_end() {
