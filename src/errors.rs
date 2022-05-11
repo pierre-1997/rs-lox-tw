@@ -34,6 +34,20 @@ pub enum ExprError {
     ExpectedAddableOperands,
 }
 
+impl From<EnvironmentError> for ExprError {
+    fn from(ee: EnvironmentError) -> Self {
+        match ee {
+            EnvironmentError::UnknownVariable => Self::InvalidExpression,
+        }
+    }
+}
+
+impl From<StmtError> for ExprError {
+    fn from(_: StmtError) -> Self {
+        Self::InvalidExpression
+    }
+}
+
 impl fmt::Display for ExprError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -52,6 +66,7 @@ impl fmt::Display for ExprError {
 pub enum ParserError {
     ExpectedExpression,
     InvalidConsumeType,
+    ExpectedEqual,
 }
 
 impl fmt::Display for ParserError {
@@ -59,6 +74,7 @@ impl fmt::Display for ParserError {
         match self {
             ParserError::InvalidConsumeType => write!(f, "consume() invalid type"),
             ParserError::ExpectedExpression => write!(f, "Expected expression."),
+            ParserError::ExpectedEqual => write!(f, "Expected equal there."),
         }
     }
 }
@@ -66,4 +82,24 @@ impl fmt::Display for ParserError {
 pub enum RunError {}
 
 #[derive(Debug)]
-pub enum StmtError {}
+pub enum StmtError {
+    GenericStmtError,
+}
+
+impl From<ExprError> for StmtError {
+    fn from(_: ExprError) -> Self {
+        Self::GenericStmtError
+    }
+}
+
+pub enum EnvironmentError {
+    UnknownVariable,
+}
+
+impl fmt::Display for EnvironmentError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EnvironmentError::UnknownVariable => write!(f, "Undefined variable."),
+        }
+    }
+}

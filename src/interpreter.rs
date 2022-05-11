@@ -1,3 +1,4 @@
+use crate::environment::Environment;
 use crate::errors::ExprError;
 use crate::errors::StmtError;
 use crate::expr::*;
@@ -5,7 +6,9 @@ use crate::stmt::*;
 use crate::token::Object;
 use crate::token_type::TokenType;
 
-pub struct Interpreter;
+pub struct Interpreter {
+    pub environment: Environment,
+}
 
 impl ExprVisitor<Object> for Interpreter {
     fn visit_literal_expr(&self, expr: &LiteralExpr) -> Result<Object, ExprError> {
@@ -152,12 +155,19 @@ impl ExprVisitor<Object> for Interpreter {
             _ => Err(ExprError::InvalidExpression),
         }
     }
+
+    fn visit_variable_expr(&self, expr: &VariableExpr) -> Result<Object, ExprError> {
+        match self.environment.get(expr.name.dup()) {
+            Ok(o) => Ok(o),
+            Err(_) => Err(ExprError::InvalidExpression),
+        }
+    }
 }
 
 impl StmtVisitor<()> for Interpreter {
     fn visit_expression_stmt(&self, stmt: &ExpressionStmt) -> Result<(), StmtError> {
         if let Err(e) = self.evaluate(&stmt.expression) {
-            println!("{}", e);
+            eprintln!("{}", e);
         }
 
         Ok(())
@@ -167,6 +177,19 @@ impl StmtVisitor<()> for Interpreter {
         if let Ok(value) = self.evaluate(&stmt.expression) {
             println!("{}", value);
         }
+
+        Ok(())
+    }
+
+    fn visit_var_stmt(&self, stmt: &VarStmt) -> Result<(), StmtError> {
+        let mut value = Object::Nil;
+
+        if stmt.initializer.is_some() {
+            value = self.evaluate(stmt.initializer.as_ref().unwrap())?;
+        }
+
+        // TODO
+        // self.environment.define(stmt.name.lexeme.clone(), value);
 
         Ok(())
     }

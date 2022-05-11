@@ -10,6 +10,7 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
             "Unary    : Token operator, Box<Expr> right".to_string(),
             "Grouping : Box<Expr> expression".to_string(),
             "Literal  : Option<Object> value".to_string(),
+            "Variable : Token name".to_string(),
         ],
     )?;
 
@@ -19,6 +20,7 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
         vec![
             "Expression : Expr expression".to_string(),
             "Print      : Expr expression".to_string(),
+            "Var        : Token name, Option<Expr> initializer".to_string(),
         ],
     )?;
 
@@ -31,13 +33,16 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     // Imports
     file.write_all(format!("use crate::errors::{}Error;\n", base_name).as_bytes())?;
     if base_name == "Stmt" {
-        file.write_all(b"use crate::expr::Expr;\n\n")?
+        file.write_all(b"use crate::expr::Expr;\n")?;
+        file.write_all(b"use crate::token::Token;\n")?;
     } else if base_name == "Expr" {
-        file.write_all(b"use crate::token::{Object, Token};\n\n")?;
+        file.write_all(b"use crate::token::{Object, Token};\n")?;
     }
+    // Additional '\n' after imports
+    file.write_all(b"\n")?;
 
     // Define Expr enum
-    file.write_all(format!("pub enum {} {{\n", base_name).as_bytes())?;
+    file.write_all(format!("#[derive(Debug)]\npub enum {} {{\n", base_name).as_bytes())?;
     for ttype in &types
         .iter()
         .map(|s| s.split(':').collect::<Vec<&str>>()[0].trim())
@@ -82,7 +87,9 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
         let ttype = splitted[0].trim();
         let args = splitted[1].trim();
 
-        file.write_all(format!("pub struct {}{} {{\n", ttype, base_name).as_bytes())?;
+        file.write_all(
+            format!("#[derive(Debug)]\npub struct {}{} {{\n", ttype, base_name).as_bytes(),
+        )?;
         for arg in args
             .split(',')
             .collect::<Vec<&str>>()

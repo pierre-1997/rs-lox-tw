@@ -18,10 +18,71 @@ impl<'a> Parser<'a> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            statements.push(self.statement()?);
+            match self.declaration() {
+                Ok(s) => match s {
+                    Some(s) => statements.push(s),
+                    None => {}
+                },
+                Err(e) => {
+                    eprintln!("{e}");
+                }
+            }
         }
 
         Ok(statements)
+    }
+
+    fn declaration(&mut self) -> Result<Option<Stmt>, ParserError> {
+        if self.matchs_next(&[TokenType::Var]) {
+            match self.var_declaration() {
+                Ok(s) => {
+                    return Ok(Some(s));
+                }
+                Err(e) => {
+                    eprintln!("{e}");
+                    self.synchronise();
+                }
+            }
+        }
+
+        match self.statement() {
+            Ok(s) => {
+                return Ok(Some(s));
+            }
+            Err(e) => {
+                println!("{e}");
+                self.synchronise();
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn var_declaration(&mut self) -> Result<Stmt, ParserError> {
+        // Expect an indentifier as the variable name.
+        let name = self.consume(TokenType::Identifier, "Expected variable name.")?;
+
+        // If we have an '=' after the variable name, means we should then find a value
+        if self.matchs_next(&[TokenType::Equal]) {
+            // Parse the value and return an initialized VarStmt
+            let initializer = self.expression()?;
+            return Ok(Stmt::Var(VarStmt {
+                name,
+                initializer: Some(initializer),
+            }));
+        }
+
+        // Check if we got an ending ';' after the variable declaration
+        self.consume(
+            TokenType::Semicolon,
+            "Expected ';' after variable declaration.",
+        )?;
+
+        // Return a non-initialized VarStmt
+        Ok(Stmt::Var(VarStmt {
+            name,
+            initializer: None,
+        }))
     }
 
     fn statement(&mut self) -> Result<Stmt, ParserError> {
@@ -158,6 +219,12 @@ impl<'a> Parser<'a> {
         if self.matchs_next(&[TokenType::Number, TokenType::String]) {
             return Ok(Expr::Literal(LiteralExpr {
                 value: self.previous().literal,
+            }));
+        }
+
+        if self.matchs_next(&[TokenType::Identifier]) {
+            return Ok(Expr::Variable(VariableExpr {
+                name: self.previous(),
             }));
         }
 
