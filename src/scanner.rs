@@ -168,7 +168,7 @@ impl Scanner {
         }
 
         self.current += 1;
-        return true;
+        true
     }
 
     fn peek(&self) -> char {

@@ -4,7 +4,7 @@ use std::fmt;
 use lazy_static::lazy_static;
 lazy_static! {}
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Object {
     Num(f64),
     Str(String),
@@ -27,9 +27,9 @@ impl fmt::Display for Object {
 
 #[derive(Debug)]
 pub struct Token {
-    ttype: TokenType,
+    pub ttype: TokenType,
     pub lexeme: String,
-    literal: Option<Object>,
+    pub literal: Option<Object>,
     src_line: usize,
     src_start: usize,
     src_end: usize,
@@ -44,6 +44,17 @@ impl Token {
             src_line,
             src_start: src_at,
             src_end: src_at + 1,
+        }
+    }
+
+    pub fn dup(&self) -> Token {
+        Token {
+            ttype: self.ttype,
+            lexeme: self.lexeme.to_string(),
+            literal: self.literal.clone(),
+            src_line: self.src_line,
+            src_start: self.src_start,
+            src_end: self.src_end,
         }
     }
 

@@ -1,10 +1,14 @@
 mod ast_printer;
 mod errors;
 mod expr;
+mod parser;
 mod scanner;
 mod token;
 mod token_type;
 
+use ast_printer::AstPrinter;
+use errors::RunError;
+use parser::Parser;
 use scanner::*;
 use std::io::{self, Write};
 
@@ -66,10 +70,22 @@ pub fn run_prompt() -> io::Result<()> {
 
 pub fn run(source: String) {
     let mut scanner = Scanner::new(source);
+    let printer = AstPrinter;
 
     if let Ok(tokens) = scanner.scan_tokens() {
-        for token in tokens {
-            println!("{}", token);
+        let mut parser = Parser::new(tokens);
+
+        match parser.parse() {
+            Some(expr) => {
+                if let Ok(printed) = printer.print(&expr) {
+                    println!("AST Printer:\n{}", printed);
+                } else {
+                    println!("Unable to parse with LST.");
+                }
+            }
+            None => {
+                eprintln!("There was an error.")
+            }
         }
     }
 }
