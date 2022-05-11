@@ -1,43 +1,28 @@
 mod ast_printer;
+use ast_printer::AstPrinter;
+
 mod errors;
+
 mod expr;
+
+mod interpreter;
+use interpreter::Interpreter;
+
 mod parser;
+use parser::Parser;
+
 mod scanner;
+use scanner::*;
+use token::Object;
+
 mod token;
 mod token_type;
 
-use ast_printer::AstPrinter;
-use errors::RunError;
-use parser::Parser;
-use scanner::*;
 use std::io::{self, Write};
-
 use std::{env, fs};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-
-    /*
-    let expression = Expr::Binary(BinaryExpr {
-        left: Box::new(Expr::Unary(UnaryExpr {
-            operator: Token::minus(1, 2),
-            right: Box::new(Expr::Literal(LiteralExpr {
-                value: Some(Object::Num(123.0)),
-            })),
-        })),
-        operator: Token::star(1, 4),
-        right: Box::new(Expr::Grouping(GroupingExpr {
-            expression: Box::new(Expr::Literal(LiteralExpr {
-                value: Some(Object::Num(45.67)),
-            })),
-        })),
-    });
-
-    let printer = AstPrinter;
-    if let Ok(s) = printer.print(&expression) {
-        println!("Expression:\n{}", s);
-    }
-    */
 
     if args.is_empty() || args.len() > 2 {
         eprintln!("Usage: ./rs-lox-tw [script]");
@@ -71,17 +56,21 @@ pub fn run_prompt() -> io::Result<()> {
 pub fn run(source: String) {
     let mut scanner = Scanner::new(source);
     let printer = AstPrinter;
+    let interpreter = Interpreter;
 
     if let Ok(tokens) = scanner.scan_tokens() {
         let mut parser = Parser::new(tokens);
 
         match parser.parse() {
             Some(expr) => {
+                /*
                 if let Ok(printed) = printer.print(&expr) {
                     println!("AST Printer:\n{}", printed);
                 } else {
                     println!("Unable to parse with LST.");
                 }
+                */
+                interpreter.interpret(&expr);
             }
             None => {
                 eprintln!("There was an error.")

@@ -13,6 +13,34 @@ pub enum Object {
     False,
 }
 
+impl From<bool> for Object {
+    fn from(boolean: bool) -> Self {
+        match boolean {
+            true => Object::True,
+            false => Object::False,
+        }
+    }
+}
+
+impl From<f64> for Object {
+    fn from(n: f64) -> Self {
+        Object::Num(n)
+    }
+}
+
+impl From<String> for Object {
+    fn from(s: String) -> Self {
+        Object::Str(s)
+    }
+}
+
+impl From<&str> for Object {
+    fn from(s: &str) -> Self {
+        Object::Str(s.to_string())
+    }
+}
+
+
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

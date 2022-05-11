@@ -155,7 +155,7 @@ impl<'a> Parser<'a> {
             return Ok(self.advance());
         }
 
-        eprintln!("{}", msg);
+        eprintln!("Consume error: {}", msg);
         Err(ParserError::InvalidConsumeType)
     }
 
