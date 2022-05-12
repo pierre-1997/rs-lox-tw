@@ -1,25 +1,26 @@
 use crate::errors::{EnvironmentErrorType, LoxError};
 use crate::token::{Object, Token};
 
+use lazy_static::lazy_static;
 use std::collections::HashMap;
-
-pub struct Environment {
-    values: HashMap<String, Object>,
+use std::sync::Mutex;
+lazy_static! {
+    static ref VALUES: Mutex<HashMap<String, Object>> = Mutex::new(HashMap::new());
 }
+
+pub struct Environment {}
 
 impl Environment {
     pub fn new() -> Self {
-        Environment {
-            values: HashMap::new(),
-        }
+        Environment {}
     }
 
-    pub fn define(&mut self, name: String, obj: Object) {
-        self.values.insert(name, obj);
+    pub fn define(&self, name: String, obj: Object) {
+        VALUES.lock().unwrap().insert(name, obj);
     }
 
     pub fn get(&self, name: Token) -> Result<Object, LoxError> {
-        match self.values.get(&name.lexeme) {
+        match VALUES.lock().unwrap().get(&name.lexeme) {
             Some(v) => Ok(v.clone()),
             None => Err(LoxError::EnvironmentError {
                 error_type: EnvironmentErrorType::UnknownVariable,

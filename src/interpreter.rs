@@ -5,6 +5,9 @@ use crate::stmt::*;
 use crate::token::Object;
 use crate::token_type::TokenType;
 
+/**
+ * This is the interpreter object.
+ */
 pub struct Interpreter {
     pub environment: Environment,
 }
@@ -199,7 +202,7 @@ impl StmtVisitor<()> for Interpreter {
         }
 
         // TODO
-        // self.environment.define(stmt.name.lexeme.clone(), value);
+        self.environment.define(stmt.name.lexeme.clone(), value);
 
         Ok(())
     }
