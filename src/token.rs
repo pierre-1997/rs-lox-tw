@@ -40,7 +40,6 @@ impl From<&str> for Object {
     }
 }
 
-
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -64,6 +63,13 @@ pub struct Token {
 }
 
 impl Token {
+    pub fn location(&self) -> String {
+        format!(
+            "Line {} [{}:{}]",
+            self.src_line, self.src_start, self.src_end
+        )
+    }
+
     pub fn eof(src_line: usize, src_at: usize) -> Token {
         Token {
             ttype: TokenType::Eof,

@@ -19,11 +19,16 @@ impl Environment {
         VALUES.lock().unwrap().insert(name, obj);
     }
 
-    pub fn get(&self, name: Token) -> Result<Object, LoxError> {
-        match VALUES.lock().unwrap().get(&name.lexeme) {
+    pub fn get(&self, token: Token) -> Result<Object, LoxError> {
+        match VALUES.lock().unwrap().get(&token.lexeme) {
             Some(v) => Ok(v.clone()),
             None => Err(LoxError::EnvironmentError {
                 error_type: EnvironmentErrorType::UnknownVariable,
+                msg: format!(
+                    "{} -> No such variable '{}'.",
+                    token.location(),
+                    token.lexeme
+                ),
             }),
         }
     }

@@ -2,27 +2,33 @@ use std::fmt;
 
 use crate::token::Token;
 
+#[derive(Debug)]
 pub enum RuntimeErrorType {
     UnreachableCode,
     ExpectedNumberOperand,
     ExpectedNumberOperands,
     ExpectedAddableOperands,
 }
+
+#[derive(Debug)]
 pub enum ScannerErrorType {
     InvalidCharacter,
     UnterminatedString,
 }
 
+#[derive(Debug)]
 pub enum ParserErrorType {
     ExpectedExpression,
     InvalidConsumeType,
     ExpectedEqual,
 }
 
+#[derive(Debug)]
 pub enum EnvironmentErrorType {
     UnknownVariable,
 }
 
+#[derive(Debug)]
 pub enum LoxError {
     ParserError {
         token: Token,
@@ -38,6 +44,7 @@ pub enum LoxError {
     },
     EnvironmentError {
         error_type: EnvironmentErrorType,
+        msg: String,
     },
 }
 
@@ -70,16 +77,13 @@ impl fmt::Display for LoxError {
                 msg,
             } => match error_type {
                 ParserErrorType::InvalidConsumeType => {
-                    writeln!(f, "Error at token [{}]", token)?;
-                    writeln!(f, "{}", msg)?;
+                    write!(f, "{} -> {}", token.location(), msg)?
                 }
                 ParserErrorType::ExpectedExpression => {
-                    writeln!(f, "Error at token [{}]", token)?;
-                    writeln!(f, "Expected expression.")?;
+                    write!(f, "{} -> {}", token.location(), msg)?
                 }
                 ParserErrorType::ExpectedEqual => {
-                    writeln!(f, "Error at token [{}]", token)?;
-                    write!(f, "Expected equal there.")?;
+                    write!(f, "{} -> Expected equal there.", token.location())?
                 }
             },
 
@@ -98,7 +102,10 @@ impl fmt::Display for LoxError {
                 }
             },
 
-            _ => write!(f, "Unhandled error yet.")?,
+            // Environment errors
+            LoxError::EnvironmentError { error_type, msg } => match error_type {
+                EnvironmentErrorType::UnknownVariable => write!(f, "{}", msg)?,
+            },
         }
 
         Ok(())

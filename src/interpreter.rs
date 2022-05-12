@@ -187,9 +187,8 @@ impl StmtVisitor<()> for Interpreter {
     }
 
     fn visit_print_stmt(&self, stmt: &PrintStmt) -> Result<(), LoxError> {
-        if let Ok(value) = self.evaluate(&stmt.expression) {
-            println!("{}", value);
-        }
+        let value = self.evaluate(&stmt.expression)?;
+        println!("{}", value);
 
         Ok(())
     }
@@ -236,7 +235,7 @@ impl Interpreter {
     pub fn execute(&self, stmt: &Stmt) {
         match stmt.accept(self) {
             Ok(_) => (),
-            Err(e) => println!("{}", e),
+            Err(e) => println!("Error: {}", e),
         }
     }
 }
