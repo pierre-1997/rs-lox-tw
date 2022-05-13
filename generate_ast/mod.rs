@@ -31,7 +31,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     let mut file = File::create(output_dir.to_owned() + "/" + &base_name.to_lowercase() + ".rs")?;
 
     // Imports
-    file.write_all(b"use crate::errors::LoxError;\n")?;
+    file.write_all(b"use crate::errors::LoxErrors;\n")?;
     if base_name == "Stmt" {
         file.write_all(b"use crate::expr::Expr;\n")?;
         file.write_all(b"use crate::token::Token;\n")?;
@@ -55,7 +55,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     file.write_all(format!("impl {} {{\n", base_name).as_bytes())?;
     file.write_all(
         format!(
-            "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxError> {{\n",
+            "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxErrors> {{\n",
             base_name
         )
         .as_bytes(),
@@ -115,7 +115,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     {
         file.write_all(
             format!(
-                "    fn visit_{}_{}(&self, {}: &{}{}) -> Result<T, LoxError>;\n",
+                "    fn visit_{}_{}(&self, {}: &{}{}) -> Result<T, LoxErrors>;\n",
                 ttype.to_lowercase(),
                 base_name.to_lowercase(),
                 base_name.to_lowercase(),
@@ -136,7 +136,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
         file.write_all(format!("\n\nimpl {}{} {{\n", ttype, base_name).as_bytes())?;
         file.write_all(
             format!(
-                "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxError> {{\n",
+                "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxErrors> {{\n",
                 base_name,
             )
             .as_bytes(),

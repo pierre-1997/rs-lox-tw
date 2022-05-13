@@ -1,4 +1,4 @@
-use crate::errors::{EnvironmentErrorType, LoxError};
+use crate::errors::{EnvironmentErrorType, LoxErrors};
 use crate::token::{Object, Token};
 
 use lazy_static::lazy_static;
@@ -19,10 +19,10 @@ impl Environment {
         VALUES.lock().unwrap().insert(name, obj);
     }
 
-    pub fn get(&self, token: Token) -> Result<Object, LoxError> {
+    pub fn get(&self, token: Token) -> Result<Object, LoxErrors> {
         match VALUES.lock().unwrap().get(&token.lexeme) {
             Some(v) => Ok(v.clone()),
-            None => Err(LoxError::EnvironmentError {
+            None => Err(LoxErrors::Environment {
                 error_type: EnvironmentErrorType::UnknownVariable,
                 msg: format!(
                     "{} -> No such variable '{}'.",

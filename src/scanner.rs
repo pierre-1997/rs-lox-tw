@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::errors::{LoxError, ScannerErrorType};
+use crate::errors::{LoxErrors, ScannerErrorType};
 use crate::token::*;
 use crate::token_type::*;
 
@@ -45,7 +45,7 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<&Vec<Token>, LoxError> {
+    pub fn scan_tokens(&mut self) -> Result<&Vec<Token>, LoxErrors> {
         while !self.is_at_end() {
             self.start = self.current;
 
@@ -61,7 +61,7 @@ impl Scanner {
         self.current == self.source.len()
     }
 
-    fn scan_token(&mut self) -> Result<(), LoxError> {
+    fn scan_token(&mut self) -> Result<(), LoxErrors> {
         let c = self.advance();
         match c {
             // Single character lexemes
@@ -144,7 +144,7 @@ impl Scanner {
                 } else if c.is_alphabetic() || c == '_' {
                     self.scan_identifier();
                 } else {
-                    return Err(LoxError::ScannerError {
+                    return Err(LoxErrors::Scanner {
                         c,
                         error_type: ScannerErrorType::InvalidCharacter,
                     });
@@ -190,7 +190,7 @@ impl Scanner {
         return self.source.chars().nth(self.current + 1).unwrap();
     }
 
-    fn scan_string(&mut self) -> Result<(), LoxError> {
+    fn scan_string(&mut self) -> Result<(), LoxErrors> {
         // Keep scanning until we find the closing " or we get to the end of the source code
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
@@ -201,7 +201,7 @@ impl Scanner {
 
         // If we did not find the end of the string, error out
         if self.is_at_end() {
-            return Err(LoxError::ScannerError {
+            return Err(LoxErrors::Scanner {
                 c: '"',
                 error_type: ScannerErrorType::UnterminatedString,
             });
@@ -218,7 +218,7 @@ impl Scanner {
         Ok(())
     }
 
-    fn scan_number(&mut self) -> Result<(), LoxError> {
+    fn scan_number(&mut self) -> Result<(), LoxErrors> {
         while self.peek().is_digit(10) {
             self.advance();
         }
