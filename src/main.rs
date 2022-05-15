@@ -2,7 +2,6 @@
 // use ast_printer::AstPrinter;
 
 mod environment;
-use environment::Environment;
 
 mod errors;
 
@@ -59,9 +58,7 @@ pub fn run_prompt() -> io::Result<()> {
 pub fn run(source: String) {
     let mut scanner = Scanner::new(source);
     // let printer = AstPrinter;
-    let interpreter = Interpreter {
-        environment: Environment::new(),
-    };
+    let interpreter = Interpreter::new();
 
     if let Ok(tokens) = scanner.scan_tokens() {
         let mut parser = Parser::new(tokens);

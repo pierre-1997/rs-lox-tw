@@ -5,11 +5,15 @@ use crate::stmt::*;
 use crate::token::Object;
 use crate::token_type::TokenType;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 /**
  * This is the interpreter object.
  */
 pub struct Interpreter {
-    pub environment: Environment,
+    environment: RefCell<Rc<RefCell<Environment>>>,
+    // pub environment: Environment,
 }
 
 impl ExprVisitor<Object> for Interpreter {
@@ -40,7 +44,10 @@ impl ExprVisitor<Object> for Interpreter {
     fn visit_assign_expr(&self, expr: &AssignExpr) -> Result<Object, LoxError> {
         let value = self.evaluate(&expr.value)?;
 
-        self.environment.assign(expr.name.dup(), value.clone())?;
+        self.environment
+            .borrow()
+            .borrow_mut()
+            .assign(expr.name.dup(), value.clone())?;
 
         Ok(value)
     }
@@ -181,7 +188,7 @@ impl ExprVisitor<Object> for Interpreter {
     }
 
     fn visit_variable_expr(&self, expr: &VariableExpr) -> Result<Object, LoxError> {
-        self.environment.get(expr.name.dup())
+        self.environment.borrow().borrow().get(expr.name.dup())
     }
 }
 
@@ -208,14 +215,22 @@ impl StmtVisitor<()> for Interpreter {
             value = self.evaluate(stmt.initializer.as_ref().unwrap())?;
         }
 
-        // TODO
-        self.environment.define(stmt.name.lexeme.clone(), value);
+        self.environment
+            .borrow()
+            .borrow_mut()
+            .define(stmt.name.lexeme.clone(), value);
 
         Ok(())
     }
 }
 
 impl Interpreter {
+    pub fn new() -> Self {
+        Interpreter {
+            environment: RefCell::new(Rc::new(RefCell::new(Environment::new()))),
+        }
+    }
+
     pub fn evaluate(&self, expr: &Expr) -> Result<Object, LoxError> {
         expr.accept(self)
     }
