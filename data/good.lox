@@ -4,6 +4,26 @@
 var a = 3.0;
 var b = 5;
 
-if a * b == 15.0 and false == false {
-  var variable = 0.0;
+// if a * b == 15.0 and false == false {
+  // var variable = 0.0;
+// }
+
+var a = "global a";    // a = "global a"
+var b = "global b";    // b = "global b"
+var c = "global c";    // c = "global c"
+{
+  var a = "outer a";   // a = "outer a"
+  var b = "outer b";   // b = "outer b"
+  {
+    var a = "inner a"; // a = "inner a"
+    print a;           // "inner a"
+    print b;           // "outer b"
+    print c;           // "global c"
+  }
+  print a;             // "outer a"
+  print b;             // "outer b"
+  print c;             // "global c"
 }
+print a;               // "global a"
+print b;               // "global b"
+print c;               // "global c"

@@ -72,7 +72,12 @@ pub fn run(source: String) {
                     println!("Unable to parse with LST.");
                 }
                 */
-                interpreter.interpret(&stmts);
+                match interpreter.interpret(&stmts) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!("{}", e)
+                    }
+                }
             }
             Err(e) => {
                 eprintln!("There was an error: {}", e)

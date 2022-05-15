@@ -1,25 +1,30 @@
+use std::cell::RefCell;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use crate::errors::{EnvironmentErrorType, LoxError};
 use crate::token::{Object, Token};
 
-use std::collections::HashMap;
-
-
+#[derive(Debug)]
 pub struct Environment {
-    enclosing: Option<Box<Environment>>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
     values: HashMap<String, Object>,
 }
 
 impl Environment {
     /// Useless
     pub fn new() -> Self {
-        Environment { enclosing: None, values: HashMap::new() }
+        Environment {
+            enclosing: None,
+            values: HashMap::new(),
+        }
     }
 
-    /// Useless too ?
-    pub fn from_enclosing(env: Environment) -> Self {
+    pub fn from_enclosing(env: Rc<RefCell<Environment>>) -> Self {
         Environment {
-            enclosing: Some(Box::new(env)),
-            values: HashMap::new()
+            enclosing: Some(env),
+            values: HashMap::new(),
         }
     }
 
@@ -37,13 +42,13 @@ impl Environment {
      */
     pub fn get(&self, token: Token) -> Result<Object, LoxError> {
         // Check if the variable exists locally
-        if let Some(v) =  self.values.get(&token.lexeme) {
+        if let Some(v) = self.values.get(&token.lexeme) {
             return Ok(v.clone());
         }
 
         // If we have an enclosing environment, check inside too
-        if self.enclosing.is_some() {
-            return self.enclosing.as_ref().unwrap().get(token);
+        if let Some(enclosing) = &self.enclosing {
+            return enclosing.borrow().get(token);
         }
 
         // Else, throw an error
@@ -59,16 +64,14 @@ impl Environment {
 
     pub fn assign(&mut self, token: Token, value: Object) -> Result<(), LoxError> {
         // Try inserting in the local variables
-        if let std::collections::hash_map::Entry::Occupied(mut e) =
-            self.values.entry(token.lexeme.clone())
-        {
+        if let Entry::Occupied(mut e) = self.values.entry(token.lexeme.clone()) {
             e.insert(value);
             return Ok(());
         }
 
         // If we have an enclosing, check if we can insert into it
-        if self.enclosing.is_some() {
-            return self.enclosing.as_mut().unwrap().assign(token, value);
+        if let Some(enclosing) = &self.enclosing {
+            return enclosing.borrow_mut().assign(token, value);
         }
 
         // Otherwise, throw an error because the variable we tried to assign does not exist
@@ -81,5 +84,3 @@ impl Environment {
         })
     }
 }
-
-

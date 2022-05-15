@@ -1,12 +1,12 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::environment::Environment;
 use crate::errors::{LoxError, RuntimeErrorType};
 use crate::expr::*;
 use crate::stmt::*;
 use crate::token::Object;
 use crate::token_type::TokenType;
-
-use std::cell::RefCell;
-use std::rc::Rc;
 
 /**
  * This is the interpreter object.
@@ -224,7 +224,8 @@ impl StmtVisitor<()> for Interpreter {
     }
 
     fn visit_block_stmt(&self, stmt: &BlockStmt) -> Result<(), LoxError> {
-
+        let env = Environment::from_enclosing(self.environment.borrow().clone());
+        self.execute_block(&stmt.statements, env)
     }
 }
 
@@ -243,26 +244,25 @@ impl Interpreter {
         !(obj == Object::Nil || obj == Object::False)
     }
 
-    pub fn interpret(&self, statements: &[Stmt]) {
+    pub fn interpret(&self, statements: &[Stmt]) -> Result<(), LoxError> {
         for statement in statements {
-            self.execute(statement);
-            /*
-            {
-                Ok(obj) => {
-                    println!("Final result: {}", obj);
-                }
-                Err(e) => {
-                    eprintln!("{}", e);
-                }
-            }
-            */
+            self.execute(statement)?;
         }
+
+        Ok(())
     }
 
-    pub fn execute(&self, stmt: &Stmt) {
-        match stmt.accept(self) {
-            Ok(_) => (),
-            Err(e) => println!("Error: {}", e),
-        }
+    pub fn execute(&self, stmt: &Stmt) -> Result<(), LoxError> {
+        stmt.accept(self)
+    }
+
+    pub fn execute_block(&self, stmts: &[Stmt], env: Environment) -> Result<(), LoxError> {
+        let prev_env = self.environment.replace(Rc::new(RefCell::new(env)));
+
+        let ret = stmts.iter().try_for_each(|stmt| self.execute(stmt));
+
+        self.environment.replace(prev_env);
+
+        ret
     }
 }
