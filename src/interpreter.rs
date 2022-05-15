@@ -207,9 +207,9 @@ impl ExprVisitor<Object> for Interpreter {
     fn visit_call_expr(&self, expr: &CallExpr) -> Result<Object, LoxError> {
         let callee = self.evaluate(&expr.callee)?;
 
-        let arguments: Vec<Object> = Vec::new();
-        for argument in expr.arguments {
-            arguments.push(self.evaluate(&argument)?);
+        let mut arguments: Vec<Object> = Vec::new();
+        for argument in &expr.arguments {
+            arguments.push(self.evaluate(argument)?);
         }
 
 

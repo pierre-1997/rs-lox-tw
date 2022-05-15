@@ -526,8 +526,8 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn finish_call(&mut self, callee: &Expr) -> Result<Expr, LoxError> {
-        let arguments = Vec::new();
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, LoxError> {
+        let mut arguments = Vec::new();
 
         if !self.check(TokenType::RightParen) {
             loop {
@@ -551,7 +551,7 @@ impl<'a> Parser<'a> {
         )?;
 
         Ok(Expr::Call(CallExpr {
-            callee: Box::new(*callee),
+            callee: Box::new(callee),
             paren,
             arguments,
         }))
