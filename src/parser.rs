@@ -117,6 +117,13 @@ impl<'a> Parser<'a> {
             return self.print_statement();
         }
 
+        // Check if the next token is a scope opening left brace '{'
+        if self.matchs_next(&[TokenType::LeftBrace]) {
+            return Ok(Stmt::Block(BlockStmt {
+                statements: self.block_statement()?,
+            }));
+        }
+
         // Otherwise, parse an expression statement
         self.expression_statement()
     }
@@ -131,6 +138,23 @@ impl<'a> Parser<'a> {
         self.consume(TokenType::Semicolon, "Expected ';' after value.")?;
         // Return the parsed print statement
         Ok(Stmt::Print(PrintStmt { expression: value }))
+    }
+
+    fn block_statement(&mut self) -> Result<Vec<Stmt>, LoxError> {
+        let mut stmts = Vec::new();
+
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            if let Some(s) = self.declaration()? {
+                stmts.push(s);
+            }
+        }
+
+        self.consume(
+            TokenType::RightBrace,
+            "Missing scope ending right brace '}'.",
+        )?;
+
+        Ok(stmts)
     }
 
     /**

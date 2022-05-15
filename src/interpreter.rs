@@ -222,6 +222,10 @@ impl StmtVisitor<()> for Interpreter {
 
         Ok(())
     }
+
+    fn visit_block_stmt(&self, stmt: &BlockStmt) -> Result<(), LoxError> {
+
+    }
 }
 
 impl Interpreter {
