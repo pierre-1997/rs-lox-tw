@@ -508,8 +508,53 @@ impl<'a> Parser<'a> {
             }));
         }
 
-        // Take the next token as a primary expression
-        self.primary()
+        // Take the next token as a call expression
+        self.call()
+    }
+
+    fn call(&mut self) -> Result<Expr, LoxError> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.matchs_next(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: &Expr) -> Result<Expr, LoxError> {
+        let arguments = Vec::new();
+
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    return Err(LoxError::Parser {
+                        token: self.peek(),
+                        error_type: ParserErrorType::MaxArgNumber,
+                        msg: "".to_string(),
+                    });
+                }
+                arguments.push(self.expression()?);
+                if self.matchs_next(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(
+            TokenType::RightParen,
+            "Expected closing ')' after argument list.",
+        )?;
+
+        Ok(Expr::Call(CallExpr {
+            callee: Box::new(*callee),
+            paren,
+            arguments,
+        }))
     }
 
     /**

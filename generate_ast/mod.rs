@@ -8,6 +8,7 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
         vec![
             "Assign   : Token name, Box<Expr> value".to_string(),
             "Binary   : Box<Expr> left, Token operator, Box<Expr> right".to_string(),
+            "Call     : Box<Expr> callee, Token paren, Vec<Expr> arguments".to_string(),
             "Logical  : Box<Expr> left, Token operator, Box<Expr> right".to_string(),
             "Unary    : Token operator, Box<Expr> right".to_string(),
             "Grouping : Box<Expr> expression".to_string(),

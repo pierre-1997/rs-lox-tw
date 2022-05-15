@@ -21,6 +21,7 @@ pub enum ParserErrorType {
     ExpectedExpression,
     InvalidConsumeType,
     InvalidAssignTarget,
+    MaxArgNumber,
 }
 
 #[derive(Debug)]
@@ -85,6 +86,11 @@ impl fmt::Display for LoxError {
                 ParserErrorType::InvalidAssignTarget => {
                     write!(f, "{} -> Invalid assignment target.", token.location())?
                 }
+                ParserErrorType::MaxArgNumber => write!(
+                    f,
+                    "{} -> Cannot have more than 255 arguments.",
+                    token.location()
+                )?,
             },
 
             // Runtime error

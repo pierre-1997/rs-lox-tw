@@ -204,6 +204,22 @@ impl ExprVisitor<Object> for Interpreter {
         self.evaluate(&expr.right)
     }
 
+    fn visit_call_expr(&self, expr: &CallExpr) -> Result<Object, LoxError> {
+        let callee = self.evaluate(&expr.callee)?;
+
+        let arguments: Vec<Object> = Vec::new();
+        for argument in expr.arguments {
+            arguments.push(self.evaluate(&argument)?);
+        }
+
+
+        let callable = match callee {
+            _ => ()
+        };
+
+        todo!()
+        // callee.call(self, arguments)
+    }
 }
 
 impl StmtVisitor<()> for Interpreter {

@@ -11,6 +11,8 @@ mod stmt;
 mod interpreter;
 use interpreter::Interpreter;
 
+mod lox_callable;
+
 mod parser;
 use parser::Parser;
 
