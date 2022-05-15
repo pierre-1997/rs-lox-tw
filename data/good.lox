@@ -30,3 +30,7 @@ print c;               // "global c"
 
 
 if (1 == 1) if (2 == 2) print "true"; else print "false";
+
+print "hi" or 2; // "hi".
+print nil or "yes"; // "yes".
+

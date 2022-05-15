@@ -122,6 +122,11 @@ impl<'a> Parser<'a> {
             return self.print_statement();
         }
 
+        // Check if the next statement is a 'while' loop
+        if self.matchs_next(&[TokenType::While]) {
+            return self.while_statement();
+        }
+
         // Check if the next token is a scope opening left brace '{'
         if self.matchs_next(&[TokenType::LeftBrace]) {
             return Ok(Stmt::Block(BlockStmt {
@@ -167,6 +172,21 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Print(PrintStmt { expression: value }))
     }
 
+    fn while_statement(&mut self) -> Result<Stmt, LoxError> {
+        self.consume(TokenType::LeftParen, "Expected '(' after while statement.")?;
+        let condition = self.expression()?;
+        self.consume(
+            TokenType::LeftParen,
+            "Expected closing ')' after while statement.",
+        )?;
+        let body = self.statement()?;
+
+        Ok(Stmt::While(WhileStmt {
+            condition,
+            body: Box::new(body),
+        }))
+    }
+
     fn block_statement(&mut self) -> Result<Vec<Stmt>, LoxError> {
         let mut stmts = Vec::new();
 
@@ -205,7 +225,7 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&mut self) -> Result<Expr, LoxError> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.matchs_next(&[TokenType::Equal]) {
             let equals = self.previous();
@@ -331,6 +351,40 @@ impl<'a> Parser<'a> {
         }
 
         // Return the built expression
+        Ok(expr)
+    }
+
+    fn or(&mut self) -> Result<Expr, LoxError> {
+        let mut expr = self.and()?;
+
+        while self.matchs_next(&[TokenType::Or]) {
+            let operator = self.previous();
+            let right = self.and()?;
+
+            expr = Expr::Logical(LogicalExpr {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Expr, LoxError> {
+        let mut expr = self.equality()?;
+
+        while self.matchs_next(&[TokenType::And]) {
+            let operator = self.previous();
+            let right = self.equality()?;
+
+            expr = Expr::Logical(LogicalExpr {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
         Ok(expr)
     }
 

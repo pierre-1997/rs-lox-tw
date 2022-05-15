@@ -189,6 +189,21 @@ impl ExprVisitor<Object> for Interpreter {
     fn visit_variable_expr(&self, expr: &VariableExpr) -> Result<Object, LoxError> {
         self.environment.borrow().borrow().get(expr.name.dup())
     }
+
+    fn visit_logical_expr(&self, expr: &LogicalExpr) -> Result<Object, LoxError> {
+        let left = self.evaluate(&expr.left)?;
+
+        if expr.operator.ttype == TokenType::Or {
+            if self.is_truthy(left.clone()) {
+                return Ok(left);
+            }
+        } else if !self.is_truthy(left.clone()) {
+                return Ok(left);
+        }
+
+        self.evaluate(&expr.right)
+    }
+
 }
 
 impl StmtVisitor<()> for Interpreter {
@@ -232,6 +247,14 @@ impl StmtVisitor<()> for Interpreter {
             self.execute(&stmt.then_branch)?;
         } else if let Some(else_branch) = &stmt.else_branch {
             self.execute(else_branch)?;
+        }
+
+        Ok(())
+    }
+
+    fn visit_while_stmt(&self, stmt: &WhileStmt) -> Result<(), LoxError> {
+        while self.is_truthy(self.evaluate(&stmt.condition)?) {
+            self.execute(&stmt.body)?;
         }
 
         Ok(())
