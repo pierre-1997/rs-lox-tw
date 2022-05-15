@@ -6,6 +6,7 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
         output_dir,
         "Expr",
         vec![
+            "Assign   : Token name, Box<Expr> value".to_string(),
             "Binary   : Box<Expr> left, Token operator, Box<Expr> right".to_string(),
             "Unary    : Token operator, Box<Expr> right".to_string(),
             "Grouping : Box<Expr> expression".to_string(),
@@ -31,7 +32,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     let mut file = File::create(output_dir.to_owned() + "/" + &base_name.to_lowercase() + ".rs")?;
 
     // Imports
-    file.write_all(b"use crate::errors::LoxErrors;\n")?;
+    file.write_all(b"use crate::errors::LoxError;\n")?;
     if base_name == "Stmt" {
         file.write_all(b"use crate::expr::Expr;\n")?;
         file.write_all(b"use crate::token::Token;\n")?;
@@ -55,7 +56,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     file.write_all(format!("impl {} {{\n", base_name).as_bytes())?;
     file.write_all(
         format!(
-            "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxErrors> {{\n",
+            "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxError> {{\n",
             base_name
         )
         .as_bytes(),
@@ -115,7 +116,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     {
         file.write_all(
             format!(
-                "    fn visit_{}_{}(&self, {}: &{}{}) -> Result<T, LoxErrors>;\n",
+                "    fn visit_{}_{}(&self, {}: &{}{}) -> Result<T, LoxError>;\n",
                 ttype.to_lowercase(),
                 base_name.to_lowercase(),
                 base_name.to_lowercase(),
@@ -136,7 +137,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
         file.write_all(format!("\n\nimpl {}{} {{\n", ttype, base_name).as_bytes())?;
         file.write_all(
             format!(
-                "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxErrors> {{\n",
+                "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxError> {{\n",
                 base_name,
             )
             .as_bytes(),

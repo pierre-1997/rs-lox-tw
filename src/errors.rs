@@ -20,6 +20,7 @@ pub enum ScannerErrorType {
 pub enum ParserErrorType {
     ExpectedExpression,
     InvalidConsumeType,
+    InvalidAssignTarget,
 }
 
 #[derive(Debug)]
@@ -28,7 +29,7 @@ pub enum EnvironmentErrorType {
 }
 
 #[derive(Debug)]
-pub enum LoxErrors {
+pub enum LoxError {
     Parser {
         token: Token,
         error_type: ParserErrorType,
@@ -47,7 +48,7 @@ pub enum LoxErrors {
     },
 }
 
-impl LoxErrors {
+impl LoxError {
     /*
     pub fn error() -> Self{
         report(line, "".to_string(), msg);
@@ -59,10 +60,10 @@ impl LoxErrors {
     */
 }
 
-impl fmt::Display for LoxErrors {
+impl fmt::Display for LoxError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            LoxErrors::Scanner { c, error_type } => match error_type {
+            LoxError::Scanner { c, error_type } => match error_type {
                 ScannerErrorType::InvalidCharacter => write!(f, "Invalid character {c}.")?,
                 ScannerErrorType::UnterminatedString => {
                     write!(f, "Encountered an unterminated string.")?
@@ -70,7 +71,7 @@ impl fmt::Display for LoxErrors {
             },
 
             // Parser error
-            LoxErrors::Parser {
+            LoxError::Parser {
                 token,
                 error_type,
                 msg,
@@ -81,10 +82,13 @@ impl fmt::Display for LoxErrors {
                 ParserErrorType::ExpectedExpression => {
                     write!(f, "{} -> {}", token.location(), msg)?
                 }
+                ParserErrorType::InvalidAssignTarget => {
+                    write!(f, "{} -> Invalid assignment target.", token.location())?
+                }
             },
 
             // Runtime error
-            LoxErrors::Runtime { error_type } => match error_type {
+            LoxError::Runtime { error_type } => match error_type {
                 RuntimeErrorType::UnreachableCode => {
                     writeln!(f, "This code is unreachable.")?;
                 }
@@ -99,7 +103,7 @@ impl fmt::Display for LoxErrors {
             },
 
             // Environment errors
-            LoxErrors::Environment { error_type, msg } => match error_type {
+            LoxError::Environment { error_type, msg } => match error_type {
                 EnvironmentErrorType::UnknownVariable => write!(f, "{}", msg)?,
             },
         }

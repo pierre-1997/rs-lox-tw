@@ -1,4 +1,4 @@
-use crate::errors::{LoxErrors, ParserErrorType};
+use crate::errors::{LoxError, ParserErrorType};
 use crate::expr::*;
 use crate::stmt::*;
 use crate::token::{Object, Token};
@@ -26,7 +26,7 @@ impl<'a> Parser<'a> {
      * Main parsing function that transforms the array of tokens into an array of statements
      * if they are parsable.
      */
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, LoxErrors> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, LoxError> {
         // Output array of parsed statements
         let mut statements = Vec::new();
 
@@ -53,7 +53,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens into a declaration statement.
      */
-    fn declaration(&mut self) -> Result<Option<Stmt>, LoxErrors> {
+    fn declaration(&mut self) -> Result<Option<Stmt>, LoxError> {
         // If the next token is 'var', parse the variable declaration
         if self.matchs_next(&[TokenType::Var]) {
             match self.var_declaration() {
@@ -88,7 +88,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens as a variable declaration statement.
      */
-    fn var_declaration(&mut self) -> Result<Stmt, LoxErrors> {
+    fn var_declaration(&mut self) -> Result<Stmt, LoxError> {
         // Expect an indentifier as the variable name.
         let name = self.consume(TokenType::Identifier, "Expected variable name.")?;
 
@@ -111,7 +111,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens as a statement.
      */
-    fn statement(&mut self) -> Result<Stmt, LoxErrors> {
+    fn statement(&mut self) -> Result<Stmt, LoxError> {
         // Check if the next token is 'print' and if so, parse the print statement
         if self.matchs_next(&[TokenType::Print]) {
             return self.print_statement();
@@ -124,7 +124,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens in a print statement.
      */
-    fn print_statement(&mut self) -> Result<Stmt, LoxErrors> {
+    fn print_statement(&mut self) -> Result<Stmt, LoxError> {
         // Parse the value to print as an expression
         let value = self.expression()?;
         // Check the statement ends with a semicolon.
@@ -136,7 +136,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens in an expression statement.
      */
-    fn expression_statement(&mut self) -> Result<Stmt, LoxErrors> {
+    fn expression_statement(&mut self) -> Result<Stmt, LoxError> {
         // Parse the expression
         let expr = self.expression()?;
         // Check the expression ends with a semicolon.
@@ -148,15 +148,40 @@ impl<'a> Parser<'a> {
     /**
      * Parse the next tokens as an expression.
      */
-    fn expression(&mut self) -> Result<Expr, LoxErrors> {
+    fn expression(&mut self) -> Result<Expr, LoxError> {
         // Parse and return the equality
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expr, LoxError> {
+        let expr = self.equality()?;
+
+        if self.matchs_next(&[TokenType::Equal]) {
+            let equals = self.previous();
+            let value = self.assignment()?;
+
+            if let Expr::Variable(var_expr) = expr {
+                let name = var_expr.name;
+                return Ok(Expr::Assign(AssignExpr {
+                    name,
+                    value: Box::new(value),
+                }));
+            }
+
+            return Err(LoxError::Parser {
+                token: equals,
+                error_type: ParserErrorType::InvalidAssignTarget,
+                msg: "".to_string(),
+            });
+        }
+
+        Ok(expr)
     }
 
     /**
      * Parses the next token into an '!=' or '==' expression.
      */
-    fn equality(&mut self) -> Result<Expr, LoxErrors> {
+    fn equality(&mut self) -> Result<Expr, LoxError> {
         // Parse the comparison
         let mut expr = self.comparison()?;
 
@@ -181,7 +206,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the nexto tokens into a comparison '>', '>=', '<' or '<=' expression.
      */
-    fn comparison(&mut self) -> Result<Expr, LoxErrors> {
+    fn comparison(&mut self) -> Result<Expr, LoxError> {
         // Get the current terminal expression
         let mut expr = self.term()?;
 
@@ -211,7 +236,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next token into a terminal '-' or '+' expression.
      */
-    fn term(&mut self) -> Result<Expr, LoxErrors> {
+    fn term(&mut self) -> Result<Expr, LoxError> {
         // Take the current factor expression
         let mut expr = self.factor()?;
 
@@ -236,7 +261,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens into a factor '*' or '/' expression.
      */
-    fn factor(&mut self) -> Result<Expr, LoxErrors> {
+    fn factor(&mut self) -> Result<Expr, LoxError> {
         // Take the next unary expression
         let mut expr = self.unary()?;
 
@@ -263,7 +288,7 @@ impl<'a> Parser<'a> {
      *
      * Note: It can start with '!' or '-', like '-4' or '!true'.
      */
-    fn unary(&mut self) -> Result<Expr, LoxErrors> {
+    fn unary(&mut self) -> Result<Expr, LoxError> {
         // Check if we are in the case of a '!' or '-' unary expression.
         if self.matchs_next(&[TokenType::Bang, TokenType::Minus]) {
             // Take the previous token as the operator
@@ -286,7 +311,7 @@ impl<'a> Parser<'a> {
      * Parses the next single token as a primary expression, meaning a string, number, boolean,
      * Nil or an identifier (example: variable/function name).
      */
-    fn primary(&mut self) -> Result<Expr, LoxErrors> {
+    fn primary(&mut self) -> Result<Expr, LoxError> {
         // Parse False
         if self.matchs_next(&[TokenType::False]) {
             return Ok(Expr::Literal(LiteralExpr {
@@ -335,7 +360,7 @@ impl<'a> Parser<'a> {
         }
 
         // Error out because we expected an expression here
-        Err(LoxErrors::Parser {
+        Err(LoxError::Parser {
             token: self.tokens[self.current].dup(),
             error_type: ParserErrorType::ExpectedExpression,
             msg: "".to_string(),
@@ -348,14 +373,14 @@ impl<'a> Parser<'a> {
      *
      * Note: This function consumes the token if it is of wanted type.
      */
-    fn consume(&mut self, ttype: TokenType, msg: &str) -> Result<Token, LoxErrors> {
+    fn consume(&mut self, ttype: TokenType, msg: &str) -> Result<Token, LoxError> {
         // Check that the next token as the correct type
         if self.check(ttype) {
             return Ok(self.advance());
         }
 
         // Error out with the given message string
-        Err(LoxErrors::Parser {
+        Err(LoxError::Parser {
             token: self.tokens[self.current].dup(),
             error_type: ParserErrorType::InvalidConsumeType,
             msg: msg.to_string(),

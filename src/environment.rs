@@ -1,4 +1,4 @@
-use crate::errors::{EnvironmentErrorType, LoxErrors};
+use crate::errors::{EnvironmentErrorType, LoxError};
 use crate::token::{Object, Token};
 
 use lazy_static::lazy_static;
@@ -31,11 +31,11 @@ impl Environment {
      *
      * Note: Throws an error if the key does not exist.
      */
-    pub fn get(&self, token: Token) -> Result<Object, LoxErrors> {
+    pub fn get(&self, token: Token) -> Result<Object, LoxError> {
         // Lock the mutex and try to get the value
         match VALUES.lock().unwrap().get(&token.lexeme) {
             Some(v) => Ok(v.clone()),
-            None => Err(LoxErrors::Environment {
+            None => Err(LoxError::Environment {
                 error_type: EnvironmentErrorType::UnknownVariable,
                 msg: format!(
                     "{} -> No such variable '{}'.",
@@ -44,5 +44,22 @@ impl Environment {
                 ),
             }),
         }
+    }
+
+    pub fn assign(&self, token: Token, value: Object) -> Result<(), LoxError> {
+        if let std::collections::hash_map::Entry::Occupied(mut e) =
+            VALUES.lock().unwrap().entry(token.lexeme.clone())
+        {
+            e.insert(value);
+            return Ok(());
+        }
+
+        Err(LoxError::Environment {
+            error_type: EnvironmentErrorType::UnknownVariable,
+            msg: format!(
+                "Cannot assign value to unknown variable '{}'.",
+                token.lexeme
+            ),
+        })
     }
 }

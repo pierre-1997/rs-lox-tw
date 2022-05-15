@@ -1,5 +1,5 @@
 use crate::environment::Environment;
-use crate::errors::{LoxErrors, RuntimeErrorType};
+use crate::errors::{LoxError, RuntimeErrorType};
 use crate::expr::*;
 use crate::stmt::*;
 use crate::token::Object;
@@ -13,11 +13,11 @@ pub struct Interpreter {
 }
 
 impl ExprVisitor<Object> for Interpreter {
-    fn visit_literal_expr(&self, expr: &LiteralExpr) -> Result<Object, LoxErrors> {
+    fn visit_literal_expr(&self, expr: &LiteralExpr) -> Result<Object, LoxError> {
         Ok(expr.value.clone().unwrap())
     }
 
-    fn visit_unary_expr(&self, expr: &UnaryExpr) -> Result<Object, LoxErrors> {
+    fn visit_unary_expr(&self, expr: &UnaryExpr) -> Result<Object, LoxError> {
         let right = self.evaluate(&expr.right)?;
 
         match expr.operator.ttype {
@@ -25,23 +25,31 @@ impl ExprVisitor<Object> for Interpreter {
                 if let Object::Num(x) = right {
                     Ok(Object::Num(-x))
                 } else {
-                    Err(LoxErrors::Runtime {
+                    Err(LoxError::Runtime {
                         error_type: RuntimeErrorType::ExpectedNumberOperand,
                     })
                 }
             }
             TokenType::Bang => Ok(Object::from(!self.is_truthy(right))),
-            _ => Err(LoxErrors::Runtime {
+            _ => Err(LoxError::Runtime {
                 error_type: RuntimeErrorType::UnreachableCode,
             }),
         }
     }
 
-    fn visit_grouping_expr(&self, expr: &GroupingExpr) -> Result<Object, LoxErrors> {
+    fn visit_assign_expr(&self, expr: &AssignExpr) -> Result<Object, LoxError> {
+        let value = self.evaluate(&expr.value)?;
+
+        self.environment.assign(expr.name.dup(), value.clone())?;
+
+        Ok(value)
+    }
+
+    fn visit_grouping_expr(&self, expr: &GroupingExpr) -> Result<Object, LoxError> {
         self.evaluate(&expr.expression)
     }
 
-    fn visit_binary_expr(&self, expr: &BinaryExpr) -> Result<Object, LoxErrors> {
+    fn visit_binary_expr(&self, expr: &BinaryExpr) -> Result<Object, LoxError> {
         let left = self.evaluate(&expr.left)?;
         let right = self.evaluate(&expr.right)?;
 
@@ -53,7 +61,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxErrors::Runtime {
+                Err(LoxError::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -65,7 +73,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxErrors::Runtime {
+                Err(LoxError::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -78,7 +86,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxErrors::Runtime {
+                Err(LoxError::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -102,7 +110,7 @@ impl ExprVisitor<Object> for Interpreter {
                 }
 
                 // TODO: Specific error for when 2 different type (a string and a number)
-                Err(LoxErrors::Runtime {
+                Err(LoxError::Runtime {
                     error_type: RuntimeErrorType::ExpectedAddableOperands,
                 })
             }
@@ -116,7 +124,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxErrors::Runtime {
+                Err(LoxError::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -129,7 +137,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxErrors::Runtime {
+                Err(LoxError::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -142,7 +150,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxErrors::Runtime {
+                Err(LoxError::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -155,7 +163,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxErrors::Runtime {
+                Err(LoxError::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -166,19 +174,19 @@ impl ExprVisitor<Object> for Interpreter {
             //Handle '=='
             TokenType::EqualEqual => Ok(Object::from(left == right)),
 
-            _ => Err(LoxErrors::Runtime {
+            _ => Err(LoxError::Runtime {
                 error_type: RuntimeErrorType::UnreachableCode,
             }),
         }
     }
 
-    fn visit_variable_expr(&self, expr: &VariableExpr) -> Result<Object, LoxErrors> {
+    fn visit_variable_expr(&self, expr: &VariableExpr) -> Result<Object, LoxError> {
         self.environment.get(expr.name.dup())
     }
 }
 
 impl StmtVisitor<()> for Interpreter {
-    fn visit_expression_stmt(&self, stmt: &ExpressionStmt) -> Result<(), LoxErrors> {
+    fn visit_expression_stmt(&self, stmt: &ExpressionStmt) -> Result<(), LoxError> {
         if let Err(e) = self.evaluate(&stmt.expression) {
             eprintln!("{}", e);
         }
@@ -186,14 +194,14 @@ impl StmtVisitor<()> for Interpreter {
         Ok(())
     }
 
-    fn visit_print_stmt(&self, stmt: &PrintStmt) -> Result<(), LoxErrors> {
+    fn visit_print_stmt(&self, stmt: &PrintStmt) -> Result<(), LoxError> {
         let value = self.evaluate(&stmt.expression)?;
         println!("{}", value);
 
         Ok(())
     }
 
-    fn visit_var_stmt(&self, stmt: &VarStmt) -> Result<(), LoxErrors> {
+    fn visit_var_stmt(&self, stmt: &VarStmt) -> Result<(), LoxError> {
         let mut value = Object::Nil;
 
         if stmt.initializer.is_some() {
@@ -208,7 +216,7 @@ impl StmtVisitor<()> for Interpreter {
 }
 
 impl Interpreter {
-    pub fn evaluate(&self, expr: &Expr) -> Result<Object, LoxErrors> {
+    pub fn evaluate(&self, expr: &Expr) -> Result<Object, LoxError> {
         expr.accept(self)
     }
 
