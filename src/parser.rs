@@ -112,6 +112,11 @@ impl<'a> Parser<'a> {
      * Parses the next tokens as a statement.
      */
     fn statement(&mut self) -> Result<Stmt, LoxError> {
+        // Check if the next token is the start of a for-statement\
+        if self.matchs_next(&[TokenType::For]) {
+            return self.for_statement();
+        }
+
         // Check if the next token is the start of an if-statement
         if self.matchs_next(&[TokenType::If]) {
             return self.if_statement();
@@ -138,8 +143,103 @@ impl<'a> Parser<'a> {
         self.expression_statement()
     }
 
+    fn for_statement(&mut self) -> Result<Stmt, LoxError> {
+        // The next token to come after 'for' must be an opening '('
+        self.consume(
+            TokenType::LeftParen,
+            "Expected opening '(' after 'for' statement.",
+        )?;
+
+        // Parsing the initializer if any
+        let initializer;
+        // for (; ...) -> no initializer
+        if self.matchs_next(&[TokenType::Semicolon]) {
+            initializer = None;
+        // for (var ..; ...) -> initializer is a var declaration
+        } else if self.matchs_next(&[TokenType::Var]) {
+            initializer = Some(self.var_declaration()?);
+        // for (<expression>; ...)
+        } else {
+            initializer = Some(self.expression_statement()?);
+        }
+
+        // Parsing the condition if any
+        let mut condition = None;
+        // for(<initializer>; <condition> ; ...)
+        if !self.check(TokenType::Semicolon) {
+            condition = Some(self.expression()?);
+        }
+        // Check that the condition is correctly followed by a ';'
+        self.consume(TokenType::Semicolon, "Expected ';' after loop condition.")?;
+
+        // Parsing the increment if any
+        let mut increment = None;
+        // If we are not at the closing ')', parse the increment
+        if !self.check(TokenType::RightParen) {
+            increment = Some(self.expression()?);
+        }
+
+        // Check that the for statement is correctly ending with a ')'
+        self.consume(
+            TokenType::RightParen,
+            "Expected closing ')' after for statement.",
+        )?;
+
+        /*
+         * We will now basically transform the for loop into a while loop here.
+         *
+         * Written for loop:
+         * for (var i = 0; i < 10; i = i + 1) print i;
+         *
+         * Executed while loop:
+         * {
+         * var i = 0;
+         * while (i < 10) {
+         *  print i;
+         *  i = i + 1;
+         * }
+        }
+        */
+
+        // Parse the body statements of the for loop
+        // e.g in the example above: "print i;"
+        let mut body = self.statement()?;
+
+        // If there were an increment, write an iteration of it at the end of the body.
+        // e.g in the example above: "i = i + 1"
+        if let Some(i) = increment {
+            body = Stmt::Block(BlockStmt {
+                statements: vec![body, Stmt::Expression(ExpressionStmt { expression: i })],
+            })
+        }
+
+        // If there weren't any condition, write a true literal expression instead to a perform a
+        // while (true) infinite loop.
+        if condition.is_none() {
+            condition = Some(Expr::Literal(LiteralExpr {
+                value: Some(Object::True),
+            }));
+        }
+
+        // Put the current body into a while expression with its condition
+        body = Stmt::While(WhileStmt {
+            condition: condition.unwrap(),
+            body: Box::new(body),
+        });
+
+        // If there were any initializer, put it at the beggining of the new tranformed code
+        // e.g in the example above: "var i = 0;"
+        if initializer.is_some() {
+            body = Stmt::Block(BlockStmt {
+                statements: vec![initializer.unwrap(), body],
+            });
+        }
+
+        Ok(body)
+    }
+
     fn if_statement(&mut self) -> Result<Stmt, LoxError> {
-        self.consume(TokenType::LeftParen, "Expected '(' after if.")?;
+        self.consume(TokenType::LeftParen, "Expected '(' after 'if' statement.")?;
         let condition = self.expression()?;
         self.consume(
             TokenType::RightParen,
