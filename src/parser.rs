@@ -112,6 +112,11 @@ impl<'a> Parser<'a> {
      * Parses the next tokens as a statement.
      */
     fn statement(&mut self) -> Result<Stmt, LoxError> {
+        // Check if the next token is the start of an if-statement
+        if self.matchs_next(&[TokenType::If]) {
+            return self.if_statement();
+        }
+
         // Check if the next token is 'print' and if so, parse the print statement
         if self.matchs_next(&[TokenType::Print]) {
             return self.print_statement();
@@ -126,6 +131,28 @@ impl<'a> Parser<'a> {
 
         // Otherwise, parse an expression statement
         self.expression_statement()
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, LoxError> {
+        self.consume(TokenType::LeftParen, "Expected '(' after if.")?;
+        let condition = self.expression()?;
+        self.consume(
+            TokenType::RightParen,
+            "Missing closing ')' after if condition.",
+        )?;
+
+        let then_branch = self.statement()?;
+        let mut else_branch = None;
+
+        if self.matchs_next(&[TokenType::Else]) {
+            else_branch = Some(Box::new(self.statement()?));
+        }
+
+        Ok(Stmt::If(IfStmt {
+            condition,
+            then_branch: Box::new(then_branch),
+            else_branch,
+        }))
     }
 
     /**

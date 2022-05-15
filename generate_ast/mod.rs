@@ -21,6 +21,8 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
         vec![
             "Block      : Vec<Stmt> statements".to_string(),
             "Expression : Expr expression".to_string(),
+            "If         : Expr condition, Box<Stmt> then_branch, Option<Box<Stmt>> else_branch"
+                .to_string(),
             "Print      : Expr expression".to_string(),
             "Var        : Token name, Option<Expr> initializer".to_string(),
         ],
