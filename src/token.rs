@@ -1,56 +1,7 @@
-use crate::token_type::*;
 use std::fmt;
 
-use lazy_static::lazy_static;
-lazy_static! {}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Object {
-    Num(f64),
-    Str(String),
-    Nil,
-    True,
-    False,
-}
-
-impl From<bool> for Object {
-    fn from(boolean: bool) -> Self {
-        match boolean {
-            true => Object::True,
-            false => Object::False,
-        }
-    }
-}
-
-impl From<f64> for Object {
-    fn from(n: f64) -> Self {
-        Object::Num(n)
-    }
-}
-
-impl From<String> for Object {
-    fn from(s: String) -> Self {
-        Object::Str(s)
-    }
-}
-
-impl From<&str> for Object {
-    fn from(s: &str) -> Self {
-        Object::Str(s.to_string())
-    }
-}
-
-impl fmt::Display for Object {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Num(x) => write!(f, "{}", x),
-            Self::Str(s) => write!(f, "\"{}\"", s),
-            Self::Nil => write!(f, "nil"),
-            Self::True => write!(f, "true"),
-            Self::False => write!(f, "false"),
-        }
-    }
-}
+use crate::object::Object;
+use crate::token_type::*;
 
 #[derive(Debug)]
 pub struct Token {

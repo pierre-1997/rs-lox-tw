@@ -1,7 +1,10 @@
+use std::rc::Rc;
+
 use crate::errors::{LoxError, ParserErrorType};
 use crate::expr::*;
+use crate::object::Object;
 use crate::stmt::*;
-use crate::token::{Object, Token};
+use crate::token::Token;
 use crate::token_type::TokenType;
 
 /**
@@ -54,6 +57,17 @@ impl<'a> Parser<'a> {
      * Parses the next tokens into a declaration statement.
      */
     fn declaration(&mut self) -> Result<Option<Stmt>, LoxError> {
+        // If the next token is 'fun', parse the function definition
+        if self.matchs_next(&[TokenType::Fun]) {
+            match self.function("function") {
+                Ok(s) => return Ok(Some(s)),
+                Err(e) => {
+                    eprintln!("{}", e);
+                    self.synchronize();
+                }
+            }
+        }
+
         // If the next token is 'var', parse the variable declaration
         if self.matchs_next(&[TokenType::Var]) {
             match self.var_declaration() {
@@ -83,6 +97,59 @@ impl<'a> Parser<'a> {
         }
 
         Ok(None)
+    }
+
+    fn function(&mut self, kind: &str) -> Result<Stmt, LoxError> {
+        // Parse the function's name
+        let name = self.consume(TokenType::Identifier, &format!("Expected {} name.", kind))?;
+        // Parse the opening '(' after the function's name
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expected opening '(' after {} name", kind),
+        )?;
+
+        // Parse the function's parameters
+        let mut params = Vec::new();
+        if !self.check(TokenType::RightParen) {
+            loop {
+                // Caps the number of function parameters to 255
+                if params.len() >= 255 {
+                    return Err(LoxError::Parser {
+                        token: self.peek(),
+                        error_type: ParserErrorType::MaxArgNumber,
+                        msg: "".to_string(),
+                    });
+                }
+
+                // Parse the next param and save it
+                params.push(self.consume(TokenType::Identifier, "Expected parameter name here.")?);
+                // If the next token is not a comma, we finished parsing the parameters
+                if !self.matchs_next(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        // Parse the closing ')' after the function's definition
+        self.consume(
+            TokenType::RightParen,
+            "Expected closing ')' after parameters.",
+        )?;
+        // Parse the opening '{' so that we can report an error here if it isnt there
+        self.consume(
+            TokenType::LeftBrace,
+            &format!("Expected '{{' before {kind} body"),
+        )?;
+        // Parse the function's body enclosed in {}
+        let body = Rc::new(self.block_statement()?);
+
+        // TODO: should we use Rc<Stmt> everywhere ?
+        // Return the build Function Stmt
+        Ok(Stmt::Function(FunctionStmt {
+            name,
+            params: Rc::new(params),
+            body,
+        }))
     }
 
     /**
@@ -134,8 +201,9 @@ impl<'a> Parser<'a> {
 
         // Check if the next token is a scope opening left brace '{'
         if self.matchs_next(&[TokenType::LeftBrace]) {
+            let stmts = self.block_statement()?;
             return Ok(Stmt::Block(BlockStmt {
-                statements: self.block_statement()?,
+                statements: Rc::new(stmts),
             }));
         }
 
@@ -209,7 +277,10 @@ impl<'a> Parser<'a> {
         // e.g in the example above: "i = i + 1"
         if let Some(i) = increment {
             body = Stmt::Block(BlockStmt {
-                statements: vec![body, Stmt::Expression(ExpressionStmt { expression: i })],
+                statements: Rc::new(vec![
+                    Rc::new(body),
+                    Rc::new(Stmt::Expression(ExpressionStmt { expression: i })),
+                ]),
             })
         }
 
@@ -231,7 +302,7 @@ impl<'a> Parser<'a> {
         // e.g in the example above: "var i = 0;"
         if initializer.is_some() {
             body = Stmt::Block(BlockStmt {
-                statements: vec![initializer.unwrap(), body],
+                statements: Rc::new(vec![Rc::new(initializer.unwrap()), Rc::new(body)]),
             });
         }
 
@@ -287,12 +358,12 @@ impl<'a> Parser<'a> {
         }))
     }
 
-    fn block_statement(&mut self) -> Result<Vec<Stmt>, LoxError> {
+    fn block_statement(&mut self) -> Result<Vec<Rc<Stmt>>, LoxError> {
         let mut stmts = Vec::new();
 
         while !self.check(TokenType::RightBrace) && !self.is_at_end() {
             if let Some(s) = self.declaration()? {
-                stmts.push(s);
+                stmts.push(Rc::new(s));
             }
         }
 

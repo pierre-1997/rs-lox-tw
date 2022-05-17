@@ -4,8 +4,11 @@ use std::rc::Rc;
 use crate::environment::Environment;
 use crate::errors::{LoxError, RuntimeErrorType};
 use crate::expr::*;
+use crate::lox_function::LoxFunction;
+use crate::lox_native::NativeFunction;
+use crate::native_functions::NativeClock;
+use crate::object::Object;
 use crate::stmt::*;
-use crate::token::Object;
 use crate::token_type::TokenType;
 
 /**
@@ -13,6 +16,7 @@ use crate::token_type::TokenType;
  */
 pub struct Interpreter {
     environment: RefCell<Rc<RefCell<Environment>>>,
+    pub env_globals: Rc<RefCell<Environment>>,
 }
 
 impl ExprVisitor<Object> for Interpreter {
@@ -198,7 +202,7 @@ impl ExprVisitor<Object> for Interpreter {
                 return Ok(left);
             }
         } else if !self.is_truthy(left.clone()) {
-                return Ok(left);
+            return Ok(left);
         }
 
         self.evaluate(&expr.right)
@@ -212,9 +216,8 @@ impl ExprVisitor<Object> for Interpreter {
             arguments.push(self.evaluate(argument)?);
         }
 
-
         let callable = match callee {
-            _ => ()
+            _ => (),
         };
 
         todo!()
@@ -275,12 +278,41 @@ impl StmtVisitor<()> for Interpreter {
 
         Ok(())
     }
+
+    fn visit_function_stmt(&self, stmt: &FunctionStmt) -> Result<(), LoxError> {
+        let function = Object::Function(Rc::new(LoxFunction {
+            name: stmt.name.dup(),
+            params: stmt.params.clone(),
+            body: stmt.body.clone(),
+        }));
+        /*
+                self.environment
+                    .borrow()
+                    .borrow_mut()
+                    .define(stmt.name.lexeme, function);
+        let function = LoxFunction::new(stmt, self.environment.borrow().deref(), false);
+        */
+        self.environment
+            .borrow()
+            .borrow_mut()
+            .define(stmt.name.lexeme.clone(), function);
+        Ok(())
+    }
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let mut globals = Environment::new();
+
+        let clock_function = Object::Native(Rc::new(NativeFunction {
+            function: Rc::new(NativeClock),
+        }));
+
+        globals.define("clock".to_string(), clock_function);
+
         Interpreter {
             environment: RefCell::new(Rc::new(RefCell::new(Environment::new()))),
+            env_globals: Rc::new(RefCell::new(globals)),
         }
     }
 
@@ -304,7 +336,11 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    pub fn execute_block(&self, stmts: &[Stmt], env: Environment) -> Result<(), LoxError> {
+    pub fn execute_block(
+        &self,
+        stmts: &Rc<Vec<Rc<Stmt>>>,
+        env: Environment,
+    ) -> Result<(), LoxError> {
         let prev_env = self.environment.replace(Rc::new(RefCell::new(env)));
 
         let ret = stmts.iter().try_for_each(|stmt| self.execute(stmt));

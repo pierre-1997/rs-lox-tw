@@ -4,7 +4,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::errors::{EnvironmentErrorType, LoxError};
-use crate::token::{Object, Token};
+use crate::object::Object;
+use crate::token::Token;
 
 #[derive(Debug)]
 pub struct Environment {

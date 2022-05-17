@@ -21,8 +21,9 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
         output_dir,
         "Stmt",
         vec![
-            "Block      : Vec<Stmt> statements".to_string(),
+            "Block      : Rc<Vec<Rc<Stmt>>> statements".to_string(),
             "Expression : Expr expression".to_string(),
+            "Function   : Token name, Rc<Vec<Token>> params, Rc<Vec<Rc<Stmt>>> body".to_string(),
             "If         : Expr condition, Box<Stmt> then_branch, Option<Box<Stmt>> else_branch"
                 .to_string(),
             "Print      : Expr expression".to_string(),
@@ -38,13 +39,15 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     let mut file = File::create(output_dir.to_owned() + "/" + &base_name.to_lowercase() + ".rs")?;
 
     // Imports
-    file.write_all(b"use crate::errors::LoxError;\n")?;
     if base_name == "Stmt" {
+        file.write_all(b"use std::rc::Rc;\n\n")?;
         file.write_all(b"use crate::expr::Expr;\n")?;
         file.write_all(b"use crate::token::Token;\n")?;
     } else if base_name == "Expr" {
-        file.write_all(b"use crate::token::{Object, Token};\n")?;
+        file.write_all(b"use crate::object::Object;\n")?;
+        file.write_all(b"use crate::token::Token;\n")?;
     }
+    file.write_all(b"use crate::errors::LoxError;\n")?;
     // Additional '\n' after imports
     file.write_all(b"\n")?;
 
