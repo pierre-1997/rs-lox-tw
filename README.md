@@ -5,5 +5,5 @@
 - [ ] Feature: detect and error on uninitialized variable access.
 - [ ] Feature: Add support of 'break' statement in loops.
 - [ ] Change: Custom msg string for RunTimeError (example: InvalidArgsCount)
-- [ ]
+- [ ] Feature: Support for anonymous/lambda functions
 

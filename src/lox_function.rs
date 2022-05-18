@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
@@ -14,6 +15,7 @@ pub struct LoxFunction {
     pub name: Token,
     pub params: Rc<Vec<Token>>,
     pub body: Rc<Vec<Rc<Stmt>>>,
+    closure: Rc<RefCell<Environment>>,
 }
 
 impl fmt::Debug for LoxFunction {
@@ -28,16 +30,18 @@ impl Clone for LoxFunction {
             name: self.name.dup(),
             params: Rc::clone(&self.params),
             body: Rc::clone(&self.body),
+            closure: Rc::clone(&self.closure),
         }
     }
 }
 
 impl LoxFunction {
-    pub fn new(declaration: &FunctionStmt) -> Self {
+    pub fn new(declaration: &FunctionStmt, closure: &Rc<RefCell<Environment>>) -> Self {
         Self {
             name: declaration.name.dup(),
             params: declaration.params.clone(),
             body: declaration.body.clone(),
+            closure: Rc::clone(closure),
         }
     }
 }
@@ -52,7 +56,7 @@ impl PartialEq for LoxFunction {
 
 impl LoxCallable for LoxFunction {
     fn call(&self, interpreter: &Interpreter, arguments: Vec<Object>) -> Result<Object, LoxResult> {
-        let mut env = Environment::from_enclosing(interpreter.env_globals.clone());
+        let mut env = Environment::from_enclosing(Rc::clone(&self.closure));
 
         for i in 0..self.params.len() {
             env.define(

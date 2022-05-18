@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::Rc;
 
 use crate::environment::Environment;
@@ -319,7 +320,10 @@ impl StmtVisitor<()> for Interpreter {
 
     fn visit_function_stmt(&self, stmt: &FunctionStmt) -> Result<(), LoxResult> {
         // Instanciate a new function object using its statement
-        let function = Object::Function(Rc::new(LoxFunction::new(stmt)));
+        let function = Object::Function(Rc::new(LoxFunction::new(
+            stmt,
+            self.environment.borrow().deref(),
+        )));
 
         // Define the function in the current environment
         self.environment
