@@ -2,7 +2,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::environment::Environment;
-use crate::errors::LoxError;
+use crate::errors::LoxResult;
 use crate::interpreter::Interpreter;
 use crate::lox_callable::LoxCallable;
 use crate::object::Object;
@@ -51,7 +51,7 @@ impl PartialEq for LoxFunction {
 }
 
 impl LoxCallable for LoxFunction {
-    fn call(&self, interpreter: &Interpreter, arguments: Vec<Object>) -> Result<Object, LoxError> {
+    fn call(&self, interpreter: &Interpreter, arguments: Vec<Object>) -> Result<Object, LoxResult> {
         let mut env = Environment::from_enclosing(interpreter.env_globals.clone());
 
         for i in 0..self.params.len() {
@@ -61,7 +61,10 @@ impl LoxCallable for LoxFunction {
             );
         }
 
-        interpreter.execute_block(&self.body, env)?;
+        if let Err(LoxResult::ReturnValue { value }) = interpreter.execute_block(&self.body, env) {
+            return Ok(value);
+        }
+
         Ok(Object::Nil)
     }
 

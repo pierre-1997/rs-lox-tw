@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::object::Object;
 use crate::token::Token;
 
 #[derive(Debug)]
@@ -32,7 +33,7 @@ pub enum EnvironmentErrorType {
 }
 
 #[derive(Debug)]
-pub enum LoxError {
+pub enum LoxResult {
     Parser {
         token: Token,
         error_type: ParserErrorType,
@@ -49,9 +50,12 @@ pub enum LoxError {
         error_type: EnvironmentErrorType,
         msg: String,
     },
+    ReturnValue {
+        value: Object,
+    },
 }
 
-impl LoxError {
+impl LoxResult {
     /*
     pub fn error() -> Self{
         report(line, "".to_string(), msg);
@@ -63,10 +67,10 @@ impl LoxError {
     */
 }
 
-impl fmt::Display for LoxError {
+impl fmt::Display for LoxResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            LoxError::Scanner { c, error_type } => match error_type {
+            LoxResult::Scanner { c, error_type } => match error_type {
                 ScannerErrorType::InvalidCharacter => write!(f, "Invalid character {c}.")?,
                 ScannerErrorType::UnterminatedString => {
                     write!(f, "Encountered an unterminated string.")?
@@ -74,7 +78,7 @@ impl fmt::Display for LoxError {
             },
 
             // Parser error
-            LoxError::Parser {
+            LoxResult::Parser {
                 token,
                 error_type,
                 msg,
@@ -96,7 +100,7 @@ impl fmt::Display for LoxError {
             },
 
             // Runtime error
-            LoxError::Runtime { error_type } => match error_type {
+            LoxResult::Runtime { error_type } => match error_type {
                 RuntimeErrorType::UnreachableCode => {
                     writeln!(f, "This code is unreachable.")?;
                 }
@@ -116,9 +120,12 @@ impl fmt::Display for LoxError {
             },
 
             // Environment errors
-            LoxError::Environment { error_type, msg } => match error_type {
+            LoxResult::Environment { error_type, msg } => match error_type {
                 EnvironmentErrorType::UnknownVariable => write!(f, "{}", msg)?,
             },
+
+            // Return value
+            LoxResult::ReturnValue { value } => write!(f, "return {}", value)?,
         }
 
         Ok(())

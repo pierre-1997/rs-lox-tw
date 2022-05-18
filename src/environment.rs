@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
-use crate::errors::{EnvironmentErrorType, LoxError};
+use crate::errors::{EnvironmentErrorType, LoxResult};
 use crate::object::Object;
 use crate::token::Token;
 
@@ -58,7 +58,7 @@ impl Environment {
      *
      * Note: Throws an error if the key does not exist.
      */
-    pub fn get(&self, token: &Token) -> Result<Object, LoxError> {
+    pub fn get(&self, token: &Token) -> Result<Object, LoxResult> {
         // Check if the variable exists locally
         if let Some(v) = self.values.get(&token.lexeme) {
             return Ok(v.clone());
@@ -70,7 +70,7 @@ impl Environment {
         }
 
         // Else, throw an error
-        Err(LoxError::Environment {
+        Err(LoxResult::Environment {
             error_type: EnvironmentErrorType::UnknownVariable,
             msg: format!(
                 "{} -> No such variable '{}'.",
@@ -80,7 +80,7 @@ impl Environment {
         })
     }
 
-    pub fn assign(&mut self, token: Token, value: Object) -> Result<(), LoxError> {
+    pub fn assign(&mut self, token: Token, value: Object) -> Result<(), LoxResult> {
         // Try inserting in the local variables
         if let Entry::Occupied(mut e) = self.values.entry(token.lexeme.clone()) {
             e.insert(value);
@@ -93,7 +93,7 @@ impl Environment {
         }
 
         // Otherwise, throw an error because the variable we tried to assign does not exist
-        Err(LoxError::Environment {
+        Err(LoxResult::Environment {
             error_type: EnvironmentErrorType::UnknownVariable,
             msg: format!(
                 "Cannot assign value to unknown variable '{}'.",

@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::environment::Environment;
-use crate::errors::{LoxError, RuntimeErrorType};
+use crate::errors::{LoxResult, RuntimeErrorType};
 use crate::expr::*;
 use crate::lox_callable::LoxCallable;
 use crate::lox_function::LoxFunction;
@@ -22,11 +22,11 @@ pub struct Interpreter {
 }
 
 impl ExprVisitor<Object> for Interpreter {
-    fn visit_literal_expr(&self, expr: &LiteralExpr) -> Result<Object, LoxError> {
+    fn visit_literal_expr(&self, expr: &LiteralExpr) -> Result<Object, LoxResult> {
         Ok(expr.value.clone().unwrap())
     }
 
-    fn visit_unary_expr(&self, expr: &UnaryExpr) -> Result<Object, LoxError> {
+    fn visit_unary_expr(&self, expr: &UnaryExpr) -> Result<Object, LoxResult> {
         let right = self.evaluate(&expr.right)?;
 
         match expr.operator.ttype {
@@ -34,19 +34,19 @@ impl ExprVisitor<Object> for Interpreter {
                 if let Object::Num(x) = right {
                     Ok(Object::Num(-x))
                 } else {
-                    Err(LoxError::Runtime {
+                    Err(LoxResult::Runtime {
                         error_type: RuntimeErrorType::ExpectedNumberOperand,
                     })
                 }
             }
             TokenType::Bang => Ok(Object::from(!self.is_truthy(right))),
-            _ => Err(LoxError::Runtime {
+            _ => Err(LoxResult::Runtime {
                 error_type: RuntimeErrorType::UnreachableCode,
             }),
         }
     }
 
-    fn visit_assign_expr(&self, expr: &AssignExpr) -> Result<Object, LoxError> {
+    fn visit_assign_expr(&self, expr: &AssignExpr) -> Result<Object, LoxResult> {
         let value = self.evaluate(&expr.value)?;
 
         self.environment
@@ -57,11 +57,11 @@ impl ExprVisitor<Object> for Interpreter {
         Ok(value)
     }
 
-    fn visit_grouping_expr(&self, expr: &GroupingExpr) -> Result<Object, LoxError> {
+    fn visit_grouping_expr(&self, expr: &GroupingExpr) -> Result<Object, LoxResult> {
         self.evaluate(&expr.expression)
     }
 
-    fn visit_binary_expr(&self, expr: &BinaryExpr) -> Result<Object, LoxError> {
+    fn visit_binary_expr(&self, expr: &BinaryExpr) -> Result<Object, LoxResult> {
         let left = self.evaluate(&expr.left)?;
         let right = self.evaluate(&expr.right)?;
 
@@ -73,7 +73,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxError::Runtime {
+                Err(LoxResult::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -85,7 +85,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxError::Runtime {
+                Err(LoxResult::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -98,7 +98,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxError::Runtime {
+                Err(LoxResult::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -122,7 +122,7 @@ impl ExprVisitor<Object> for Interpreter {
                 }
 
                 // TODO: Specific error for when 2 different type (a string and a number)
-                Err(LoxError::Runtime {
+                Err(LoxResult::Runtime {
                     error_type: RuntimeErrorType::ExpectedAddableOperands,
                 })
             }
@@ -136,7 +136,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxError::Runtime {
+                Err(LoxResult::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -149,7 +149,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxError::Runtime {
+                Err(LoxResult::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -162,7 +162,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxError::Runtime {
+                Err(LoxResult::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -175,7 +175,7 @@ impl ExprVisitor<Object> for Interpreter {
                     }
                 }
 
-                Err(LoxError::Runtime {
+                Err(LoxResult::Runtime {
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -186,17 +186,17 @@ impl ExprVisitor<Object> for Interpreter {
             //Handle '=='
             TokenType::EqualEqual => Ok(Object::from(left == right)),
 
-            _ => Err(LoxError::Runtime {
+            _ => Err(LoxResult::Runtime {
                 error_type: RuntimeErrorType::UnreachableCode,
             }),
         }
     }
 
-    fn visit_variable_expr(&self, expr: &VariableExpr) -> Result<Object, LoxError> {
+    fn visit_variable_expr(&self, expr: &VariableExpr) -> Result<Object, LoxResult> {
         self.look_up_env(&expr.name)
     }
 
-    fn visit_logical_expr(&self, expr: &LogicalExpr) -> Result<Object, LoxError> {
+    fn visit_logical_expr(&self, expr: &LogicalExpr) -> Result<Object, LoxResult> {
         let left = self.evaluate(&expr.left)?;
 
         if expr.operator.ttype == TokenType::Or {
@@ -210,7 +210,7 @@ impl ExprVisitor<Object> for Interpreter {
         self.evaluate(&expr.right)
     }
 
-    fn visit_call_expr(&self, expr: &CallExpr) -> Result<Object, LoxError> {
+    fn visit_call_expr(&self, expr: &CallExpr) -> Result<Object, LoxResult> {
         // Get the expression's callee
         let callee = self.evaluate(&expr.callee)?;
 
@@ -229,7 +229,7 @@ impl ExprVisitor<Object> for Interpreter {
             Object::Function(function) => function,
             // Otherwise, this is not a callable object type, return an error.
             _ => {
-                return Err(LoxError::Runtime {
+                return Err(LoxResult::Runtime {
                     error_type: RuntimeErrorType::InvalidCallObjectType,
                 });
             }
@@ -237,7 +237,7 @@ impl ExprVisitor<Object> for Interpreter {
 
         // Check called function's arity and return error if incorrect
         if arguments.len() != called_function.arity() {
-            return Err(LoxError::Runtime {
+            return Err(LoxResult::Runtime {
                 error_type: RuntimeErrorType::InvalidArgsCount,
             });
         }
@@ -248,7 +248,7 @@ impl ExprVisitor<Object> for Interpreter {
 }
 
 impl StmtVisitor<()> for Interpreter {
-    fn visit_expression_stmt(&self, stmt: &ExpressionStmt) -> Result<(), LoxError> {
+    fn visit_expression_stmt(&self, stmt: &ExpressionStmt) -> Result<(), LoxResult> {
         if let Err(e) = self.evaluate(&stmt.expression) {
             eprintln!("{}", e);
         }
@@ -256,14 +256,14 @@ impl StmtVisitor<()> for Interpreter {
         Ok(())
     }
 
-    fn visit_print_stmt(&self, stmt: &PrintStmt) -> Result<(), LoxError> {
+    fn visit_print_stmt(&self, stmt: &PrintStmt) -> Result<(), LoxResult> {
         let value = self.evaluate(&stmt.expression)?;
         println!("{}", value);
 
         Ok(())
     }
 
-    fn visit_var_stmt(&self, stmt: &VarStmt) -> Result<(), LoxError> {
+    fn visit_var_stmt(&self, stmt: &VarStmt) -> Result<(), LoxResult> {
         let mut value = Object::Nil;
 
         if stmt.initializer.is_some() {
@@ -278,12 +278,12 @@ impl StmtVisitor<()> for Interpreter {
         Ok(())
     }
 
-    fn visit_block_stmt(&self, stmt: &BlockStmt) -> Result<(), LoxError> {
+    fn visit_block_stmt(&self, stmt: &BlockStmt) -> Result<(), LoxResult> {
         let env = Environment::from_enclosing(self.environment.borrow().clone());
         self.execute_block(&stmt.statements, env)
     }
 
-    fn visit_if_stmt(&self, stmt: &IfStmt) -> Result<(), LoxError> {
+    fn visit_if_stmt(&self, stmt: &IfStmt) -> Result<(), LoxResult> {
         if self.is_truthy(self.evaluate(&stmt.condition)?) {
             self.execute(&stmt.then_branch)?;
         } else if let Some(else_branch) = &stmt.else_branch {
@@ -293,7 +293,23 @@ impl StmtVisitor<()> for Interpreter {
         Ok(())
     }
 
-    fn visit_while_stmt(&self, stmt: &WhileStmt) -> Result<(), LoxError> {
+    /**
+     * This function executes a return statement.
+     *
+     * Note: This function will use the LoxResult enum in order to return an actual value instead
+     * of an error.
+     */
+    fn visit_return_stmt(&self, stmt: &ReturnStmt) -> Result<(), LoxResult> {
+        if let Some(v) = &stmt.value {
+            Err(LoxResult::ReturnValue {
+                value: self.evaluate(v)?,
+            })
+        } else {
+            Err(LoxResult::ReturnValue { value: Object::Nil })
+        }
+    }
+
+    fn visit_while_stmt(&self, stmt: &WhileStmt) -> Result<(), LoxResult> {
         while self.is_truthy(self.evaluate(&stmt.condition)?) {
             self.execute(&stmt.body)?;
         }
@@ -301,7 +317,7 @@ impl StmtVisitor<()> for Interpreter {
         Ok(())
     }
 
-    fn visit_function_stmt(&self, stmt: &FunctionStmt) -> Result<(), LoxError> {
+    fn visit_function_stmt(&self, stmt: &FunctionStmt) -> Result<(), LoxResult> {
         // Instanciate a new function object using its statement
         let function = Object::Function(Rc::new(LoxFunction::new(stmt)));
 
@@ -332,7 +348,7 @@ impl Interpreter {
         }
     }
 
-    pub fn evaluate(&self, expr: &Expr) -> Result<Object, LoxError> {
+    pub fn evaluate(&self, expr: &Expr) -> Result<Object, LoxResult> {
         expr.accept(self)
     }
 
@@ -340,7 +356,7 @@ impl Interpreter {
         !(obj == Object::Nil || obj == Object::False)
     }
 
-    pub fn interpret(&self, statements: &[Stmt]) -> Result<(), LoxError> {
+    pub fn interpret(&self, statements: &[Stmt]) -> Result<(), LoxResult> {
         for statement in statements {
             self.execute(statement)?;
         }
@@ -348,7 +364,7 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn execute(&self, stmt: &Stmt) -> Result<(), LoxError> {
+    pub fn execute(&self, stmt: &Stmt) -> Result<(), LoxResult> {
         stmt.accept(self)
     }
 
@@ -356,7 +372,7 @@ impl Interpreter {
         &self,
         stmts: &Rc<Vec<Rc<Stmt>>>,
         env: Environment,
-    ) -> Result<(), LoxError> {
+    ) -> Result<(), LoxResult> {
         let prev_env = self.environment.replace(Rc::new(RefCell::new(env)));
 
         let ret = stmts.iter().try_for_each(|stmt| self.execute(stmt));
@@ -366,7 +382,7 @@ impl Interpreter {
         ret
     }
 
-    pub fn look_up_env(&self, name: &Token) -> Result<Object, LoxError> {
+    pub fn look_up_env(&self, name: &Token) -> Result<Object, LoxResult> {
         if let Ok(o) = self.environment.borrow().borrow().get(name) {
             Ok(o)
         } else {

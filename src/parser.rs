@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::errors::{LoxError, ParserErrorType};
+use crate::errors::{LoxResult, ParserErrorType};
 use crate::expr::*;
 use crate::object::Object;
 use crate::stmt::*;
@@ -29,7 +29,7 @@ impl<'a> Parser<'a> {
      * Main parsing function that transforms the array of tokens into an array of statements
      * if they are parsable.
      */
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, LoxError> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, LoxResult> {
         // Output array of parsed statements
         let mut statements = Vec::new();
 
@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens into a declaration statement.
      */
-    fn declaration(&mut self) -> Result<Option<Stmt>, LoxError> {
+    fn declaration(&mut self) -> Result<Option<Stmt>, LoxResult> {
         // If the next token is 'fun', parse the function definition
         if self.matchs_next(&[TokenType::Fun]) {
             match self.function("function") {
@@ -99,7 +99,7 @@ impl<'a> Parser<'a> {
         Ok(None)
     }
 
-    fn function(&mut self, kind: &str) -> Result<Stmt, LoxError> {
+    fn function(&mut self, kind: &str) -> Result<Stmt, LoxResult> {
         // Parse the function's name
         let name = self.consume(TokenType::Identifier, &format!("Expected {} name.", kind))?;
         // Parse the opening '(' after the function's name
@@ -114,7 +114,7 @@ impl<'a> Parser<'a> {
             loop {
                 // Caps the number of function parameters to 255
                 if params.len() >= 255 {
-                    return Err(LoxError::Parser {
+                    return Err(LoxResult::Parser {
                         token: self.peek(),
                         error_type: ParserErrorType::MaxArgNumber,
                         msg: "".to_string(),
@@ -145,19 +145,6 @@ impl<'a> Parser<'a> {
         // Parse the function's body enclosed in {}
         let body = Rc::new(self.block_statement()?);
 
-        /*
-        println!(
-            "ADding function: [fun {}({}) {{{:?}}}]",
-            name.lexeme,
-            params
-                .iter()
-                .map(|x| x.lexeme.clone())
-                .collect::<Vec<String>>()
-                .join(", "),
-            body
-        );
-        */
-
         // Return the build Function Stmt
         Ok(Stmt::Function(FunctionStmt {
             name,
@@ -169,7 +156,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens as a variable declaration statement.
      */
-    fn var_declaration(&mut self) -> Result<Stmt, LoxError> {
+    fn var_declaration(&mut self) -> Result<Stmt, LoxResult> {
         // Expect an indentifier as the variable name.
         let name = self.consume(TokenType::Identifier, "Expected variable name.")?;
 
@@ -192,7 +179,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens as a statement.
      */
-    fn statement(&mut self) -> Result<Stmt, LoxError> {
+    fn statement(&mut self) -> Result<Stmt, LoxResult> {
         // Check if the next token is the start of a for-statement\
         if self.matchs_next(&[TokenType::For]) {
             return self.for_statement();
@@ -206,6 +193,11 @@ impl<'a> Parser<'a> {
         // Check if the next token is 'print' and if so, parse the print statement
         if self.matchs_next(&[TokenType::Print]) {
             return self.print_statement();
+        }
+
+        // Check if the next token is a 'return' statement
+        if self.matchs_next(&[TokenType::Return]) {
+            return self.return_statement();
         }
 
         // Check if the next statement is a 'while' loop
@@ -225,7 +217,7 @@ impl<'a> Parser<'a> {
         self.expression_statement()
     }
 
-    fn for_statement(&mut self) -> Result<Stmt, LoxError> {
+    fn for_statement(&mut self) -> Result<Stmt, LoxResult> {
         // The next token to come after 'for' must be an opening '('
         self.consume(
             TokenType::LeftParen,
@@ -323,7 +315,7 @@ impl<'a> Parser<'a> {
         Ok(body)
     }
 
-    fn if_statement(&mut self) -> Result<Stmt, LoxError> {
+    fn if_statement(&mut self) -> Result<Stmt, LoxResult> {
         self.consume(TokenType::LeftParen, "Expected '(' after 'if' statement.")?;
         let condition = self.expression()?;
         self.consume(
@@ -348,7 +340,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens in a print statement.
      */
-    fn print_statement(&mut self) -> Result<Stmt, LoxError> {
+    fn print_statement(&mut self) -> Result<Stmt, LoxResult> {
         // Parse the value to print as an expression
         let value = self.expression()?;
         // Check the statement ends with a semicolon.
@@ -357,7 +349,26 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Print(PrintStmt { expression: value }))
     }
 
-    fn while_statement(&mut self) -> Result<Stmt, LoxError> {
+    /**
+     * Parses the next tokens as part of a return statement.
+     */
+    fn return_statement(&mut self) -> Result<Stmt, LoxResult> {
+        let keyword = self.previous();
+        let mut value = None;
+
+        if !self.check(TokenType::Semicolon) {
+            value = Some(self.expression()?);
+        }
+
+        self.consume(TokenType::Semicolon, "Expected ';' after return statement.")?;
+
+        Ok(Stmt::Return(ReturnStmt { keyword, value }))
+    }
+
+    /**
+     * Parses the next tokens as part of a while statement.
+     */
+    fn while_statement(&mut self) -> Result<Stmt, LoxResult> {
         self.consume(TokenType::LeftParen, "Expected '(' after while statement.")?;
         let condition = self.expression()?;
         self.consume(
@@ -372,7 +383,7 @@ impl<'a> Parser<'a> {
         }))
     }
 
-    fn block_statement(&mut self) -> Result<Vec<Rc<Stmt>>, LoxError> {
+    fn block_statement(&mut self) -> Result<Vec<Rc<Stmt>>, LoxResult> {
         let mut stmts = Vec::new();
 
         while !self.check(TokenType::RightBrace) && !self.is_at_end() {
@@ -392,7 +403,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens in an expression statement.
      */
-    fn expression_statement(&mut self) -> Result<Stmt, LoxError> {
+    fn expression_statement(&mut self) -> Result<Stmt, LoxResult> {
         // Parse the expression
         let expr = self.expression()?;
         // Check the expression ends with a semicolon.
@@ -404,12 +415,12 @@ impl<'a> Parser<'a> {
     /**
      * Parse the next tokens as an expression.
      */
-    fn expression(&mut self) -> Result<Expr, LoxError> {
+    fn expression(&mut self) -> Result<Expr, LoxResult> {
         // Parse and return the equality
         self.assignment()
     }
 
-    fn assignment(&mut self) -> Result<Expr, LoxError> {
+    fn assignment(&mut self) -> Result<Expr, LoxResult> {
         let expr = self.or()?;
 
         if self.matchs_next(&[TokenType::Equal]) {
@@ -424,7 +435,7 @@ impl<'a> Parser<'a> {
                 }));
             }
 
-            return Err(LoxError::Parser {
+            return Err(LoxResult::Parser {
                 token: equals,
                 error_type: ParserErrorType::InvalidAssignTarget,
                 msg: "".to_string(),
@@ -437,7 +448,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next token into an '!=' or '==' expression.
      */
-    fn equality(&mut self) -> Result<Expr, LoxError> {
+    fn equality(&mut self) -> Result<Expr, LoxResult> {
         // Parse the comparison
         let mut expr = self.comparison()?;
 
@@ -462,7 +473,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the nexto tokens into a comparison '>', '>=', '<' or '<=' expression.
      */
-    fn comparison(&mut self) -> Result<Expr, LoxError> {
+    fn comparison(&mut self) -> Result<Expr, LoxResult> {
         // Get the current terminal expression
         let mut expr = self.term()?;
 
@@ -492,7 +503,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next token into a terminal '-' or '+' expression.
      */
-    fn term(&mut self) -> Result<Expr, LoxError> {
+    fn term(&mut self) -> Result<Expr, LoxResult> {
         // Take the current factor expression
         let mut expr = self.factor()?;
 
@@ -517,7 +528,7 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens into a factor '*' or '/' expression.
      */
-    fn factor(&mut self) -> Result<Expr, LoxError> {
+    fn factor(&mut self) -> Result<Expr, LoxResult> {
         // Take the next unary expression
         let mut expr = self.unary()?;
 
@@ -539,7 +550,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn or(&mut self) -> Result<Expr, LoxError> {
+    fn or(&mut self) -> Result<Expr, LoxResult> {
         let mut expr = self.and()?;
 
         while self.matchs_next(&[TokenType::Or]) {
@@ -556,7 +567,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn and(&mut self) -> Result<Expr, LoxError> {
+    fn and(&mut self) -> Result<Expr, LoxResult> {
         let mut expr = self.equality()?;
 
         while self.matchs_next(&[TokenType::And]) {
@@ -578,7 +589,7 @@ impl<'a> Parser<'a> {
      *
      * Note: It can start with '!' or '-', like '-4' or '!true'.
      */
-    fn unary(&mut self) -> Result<Expr, LoxError> {
+    fn unary(&mut self) -> Result<Expr, LoxResult> {
         // Check if we are in the case of a '!' or '-' unary expression.
         if self.matchs_next(&[TokenType::Bang, TokenType::Minus]) {
             // Take the previous token as the operator
@@ -597,7 +608,7 @@ impl<'a> Parser<'a> {
         self.call()
     }
 
-    fn call(&mut self) -> Result<Expr, LoxError> {
+    fn call(&mut self) -> Result<Expr, LoxResult> {
         let mut expr = self.primary()?;
 
         loop {
@@ -611,7 +622,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn finish_call(&mut self, callee: Expr) -> Result<Expr, LoxError> {
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, LoxResult> {
         // The optional arguments list
         let mut arguments = Vec::new();
 
@@ -620,7 +631,7 @@ impl<'a> Parser<'a> {
             loop {
                 // Limit functions calls arguments count to 255
                 if arguments.len() >= 255 {
-                    return Err(LoxError::Parser {
+                    return Err(LoxResult::Parser {
                         token: self.peek(),
                         error_type: ParserErrorType::MaxArgNumber,
                         msg: "".to_string(),
@@ -655,7 +666,7 @@ impl<'a> Parser<'a> {
      * Parses the next single token as a primary expression, meaning a string, number, boolean,
      * Nil or an identifier (example: variable/function name).
      */
-    fn primary(&mut self) -> Result<Expr, LoxError> {
+    fn primary(&mut self) -> Result<Expr, LoxResult> {
         // Parse False
         if self.matchs_next(&[TokenType::False]) {
             return Ok(Expr::Literal(LiteralExpr {
@@ -704,7 +715,7 @@ impl<'a> Parser<'a> {
         }
 
         // Error out because we expected an expression here
-        Err(LoxError::Parser {
+        Err(LoxResult::Parser {
             token: self.tokens[self.current].dup(),
             error_type: ParserErrorType::ExpectedExpression,
             msg: "".to_string(),
@@ -717,14 +728,14 @@ impl<'a> Parser<'a> {
      *
      * Note: This function consumes the token if it is of wanted type.
      */
-    fn consume(&mut self, ttype: TokenType, msg: &str) -> Result<Token, LoxError> {
+    fn consume(&mut self, ttype: TokenType, msg: &str) -> Result<Token, LoxResult> {
         // Check that the next token as the correct type
         if self.check(ttype) {
             return Ok(self.advance());
         }
 
         // Error out with the given message string
-        Err(LoxError::Parser {
+        Err(LoxResult::Parser {
             token: self.tokens[self.current].dup(),
             error_type: ParserErrorType::InvalidConsumeType,
             msg: msg.to_string(),
