@@ -4,11 +4,13 @@ use std::rc::Rc;
 use crate::environment::Environment;
 use crate::errors::{LoxError, RuntimeErrorType};
 use crate::expr::*;
+use crate::lox_callable::LoxCallable;
 use crate::lox_function::LoxFunction;
 use crate::lox_native::NativeFunction;
 use crate::native_functions::NativeClock;
 use crate::object::Object;
 use crate::stmt::*;
+use crate::token::Token;
 use crate::token_type::TokenType;
 
 /**
@@ -191,7 +193,7 @@ impl ExprVisitor<Object> for Interpreter {
     }
 
     fn visit_variable_expr(&self, expr: &VariableExpr) -> Result<Object, LoxError> {
-        self.environment.borrow().borrow().get(expr.name.dup())
+        self.look_up_env(&expr.name)
     }
 
     fn visit_logical_expr(&self, expr: &LogicalExpr) -> Result<Object, LoxError> {
@@ -209,19 +211,39 @@ impl ExprVisitor<Object> for Interpreter {
     }
 
     fn visit_call_expr(&self, expr: &CallExpr) -> Result<Object, LoxError> {
+        // Get the expression's callee
         let callee = self.evaluate(&expr.callee)?;
 
+        // Optional vector of arguments
         let mut arguments: Vec<Object> = Vec::new();
+        // Evaluate each calling argument
         for argument in &expr.arguments {
             arguments.push(self.evaluate(argument)?);
         }
 
-        let callable = match callee {
-            _ => (),
+        // Try to interpret the callee as a callable object (e.g function or class)
+        let called_function: Rc<dyn LoxCallable> = match callee {
+            // Check for native function
+            Object::Native(native) => native.function.clone(),
+            // Check for defined function
+            Object::Function(function) => function,
+            // Otherwise, this is not a callable object type, return an error.
+            _ => {
+                return Err(LoxError::Runtime {
+                    error_type: RuntimeErrorType::InvalidCallObjectType,
+                });
+            }
         };
 
-        todo!()
-        // callee.call(self, arguments)
+        // Check called function's arity and return error if incorrect
+        if arguments.len() != called_function.arity() {
+            return Err(LoxError::Runtime {
+                error_type: RuntimeErrorType::InvalidArgsCount,
+            });
+        }
+
+        // Return the function's call result
+        called_function.call(self, arguments)
     }
 }
 
@@ -280,39 +302,33 @@ impl StmtVisitor<()> for Interpreter {
     }
 
     fn visit_function_stmt(&self, stmt: &FunctionStmt) -> Result<(), LoxError> {
-        let function = Object::Function(Rc::new(LoxFunction {
-            name: stmt.name.dup(),
-            params: stmt.params.clone(),
-            body: stmt.body.clone(),
-        }));
-        /*
-                self.environment
-                    .borrow()
-                    .borrow_mut()
-                    .define(stmt.name.lexeme, function);
-        let function = LoxFunction::new(stmt, self.environment.borrow().deref(), false);
-        */
+        // Instanciate a new function object using its statement
+        let function = Object::Function(Rc::new(LoxFunction::new(stmt)));
+
+        // Define the function in the current environment
         self.environment
-            .borrow()
+            .borrow_mut()
             .borrow_mut()
             .define(stmt.name.lexeme.clone(), function);
+
         Ok(())
     }
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let mut globals = Environment::new();
+        let globals = Rc::new(RefCell::new(Environment::new()));
 
-        let clock_function = Object::Native(Rc::new(NativeFunction {
-            function: Rc::new(NativeClock),
-        }));
-
-        globals.define("clock".to_string(), clock_function);
+        globals.borrow_mut().define(
+            "clock".to_string(),
+            Object::Native(Rc::new(NativeFunction {
+                function: Rc::new(NativeClock {}),
+            })),
+        );
 
         Interpreter {
-            environment: RefCell::new(Rc::new(RefCell::new(Environment::new()))),
-            env_globals: Rc::new(RefCell::new(globals)),
+            environment: RefCell::new(Rc::clone(&globals)),
+            env_globals: Rc::clone(&globals),
         }
     }
 
@@ -348,5 +364,13 @@ impl Interpreter {
         self.environment.replace(prev_env);
 
         ret
+    }
+
+    pub fn look_up_env(&self, name: &Token) -> Result<Object, LoxError> {
+        if let Ok(o) = self.environment.borrow().borrow().get(name) {
+            Ok(o)
+        } else {
+            self.env_globals.borrow().get(name)
+        }
     }
 }

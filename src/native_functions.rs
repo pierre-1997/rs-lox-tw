@@ -6,7 +6,7 @@ use crate::object::Object;
 pub struct NativeClock;
 
 impl LoxCallable for NativeClock {
-    fn call(&self, interpreter: &Interpreter, arguments: Vec<Object>) -> Result<Object, LoxError> {
+    fn call(&self, _: &Interpreter, _: Vec<Object>) -> Result<Object, LoxError> {
         Ok(Object::Num(
             chrono::offset::Local::now().timestamp_millis() as f64 / 1000.0,
         ))

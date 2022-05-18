@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::fmt;
 use std::rc::Rc;
 
 use crate::errors::{EnvironmentErrorType, LoxError};
@@ -11,6 +12,22 @@ use crate::token::Token;
 pub struct Environment {
     enclosing: Option<Rc<RefCell<Environment>>>,
     values: HashMap<String, Object>,
+}
+
+impl fmt::Display for Environment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (k, v) in &self.values {
+            writeln!(f, "{} = {};", k, v)?
+        }
+
+        if self.enclosing.is_some() {
+            writeln!(f, "Enclosing: true.")?
+        } else {
+            writeln!(f, "Enclosing: false.")?
+        }
+
+        Ok(())
+    }
 }
 
 impl Environment {
@@ -41,7 +58,7 @@ impl Environment {
      *
      * Note: Throws an error if the key does not exist.
      */
-    pub fn get(&self, token: Token) -> Result<Object, LoxError> {
+    pub fn get(&self, token: &Token) -> Result<Object, LoxError> {
         // Check if the variable exists locally
         if let Some(v) = self.values.get(&token.lexeme) {
             return Ok(v.clone());

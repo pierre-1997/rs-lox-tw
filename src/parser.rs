@@ -135,15 +135,29 @@ impl<'a> Parser<'a> {
             TokenType::RightParen,
             "Expected closing ')' after parameters.",
         )?;
+
         // Parse the opening '{' so that we can report an error here if it isnt there
         self.consume(
             TokenType::LeftBrace,
             &format!("Expected '{{' before {kind} body"),
         )?;
+
         // Parse the function's body enclosed in {}
         let body = Rc::new(self.block_statement()?);
 
-        // TODO: should we use Rc<Stmt> everywhere ?
+        /*
+        println!(
+            "ADding function: [fun {}({}) {{{:?}}}]",
+            name.lexeme,
+            params
+                .iter()
+                .map(|x| x.lexeme.clone())
+                .collect::<Vec<String>>()
+                .join(", "),
+            body
+        );
+        */
+
         // Return the build Function Stmt
         Ok(Stmt::Function(FunctionStmt {
             name,
@@ -598,10 +612,13 @@ impl<'a> Parser<'a> {
     }
 
     fn finish_call(&mut self, callee: Expr) -> Result<Expr, LoxError> {
+        // The optional arguments list
         let mut arguments = Vec::new();
 
+        // If there are arguments to parse, do it
         if !self.check(TokenType::RightParen) {
             loop {
+                // Limit functions calls arguments count to 255
                 if arguments.len() >= 255 {
                     return Err(LoxError::Parser {
                         token: self.peek(),
@@ -609,18 +626,24 @@ impl<'a> Parser<'a> {
                         msg: "".to_string(),
                     });
                 }
+
+                // Parse and store the next argument
                 arguments.push(self.expression()?);
-                if self.matchs_next(&[TokenType::Comma]) {
+
+                // Stop when the next token is not a comma
+                if !self.matchs_next(&[TokenType::Comma]) {
                     break;
                 }
             }
         }
 
+        // Parse the closing ')' after the function call
         let paren = self.consume(
             TokenType::RightParen,
             "Expected closing ')' after argument list.",
         )?;
 
+        // Instanciate and return the function call expression
         Ok(Expr::Call(CallExpr {
             callee: Box::new(callee),
             paren,

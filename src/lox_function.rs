@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
@@ -34,15 +33,13 @@ impl Clone for LoxFunction {
 }
 
 impl LoxFunction {
-    /*
-    fn new(declaration: &FunctionStmt) -> Self {
+    pub fn new(declaration: &FunctionStmt) -> Self {
         Self {
             name: declaration.name.dup(),
-            params: Rc::clone(&declaration.params),
-            body: Rc::clone(&declaration.body),
+            params: declaration.params.clone(),
+            body: declaration.body.clone(),
         }
     }
-    */
 }
 
 impl PartialEq for LoxFunction {
@@ -75,6 +72,15 @@ impl LoxCallable for LoxFunction {
 
 impl fmt::Display for LoxFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<fn {}>", self.name.lexeme)
+        write!(
+            f,
+            "<fn {}({})>",
+            self.name.lexeme,
+            self.params
+                .iter()
+                .map(|x| x.lexeme.clone())
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
     }
 }

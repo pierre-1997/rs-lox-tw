@@ -9,7 +9,10 @@ pub struct NativeFunction {
 
 impl PartialEq for NativeFunction {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.function, &other.function)
+        std::ptr::eq(
+            Rc::as_ptr(&self.function) as *const (),
+            Rc::as_ptr(&other.function) as *const (),
+        )
     }
 }
 

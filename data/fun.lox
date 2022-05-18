@@ -1,0 +1,17 @@
+
+// Simple addition function
+fun add(a, b) {
+    print a + b;
+}
+
+print add;
+add(1,2);
+
+
+// Function that prints hello
+fun say_hi(first, last) {
+    print "Hi, " + first + " " + last + "!";
+}
+
+say_hi("Dear", "Reader");
+

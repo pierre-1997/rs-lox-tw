@@ -8,9 +8,9 @@ pub struct Token {
     pub ttype: TokenType,
     pub lexeme: String,
     pub literal: Option<Object>,
-    src_line: usize,
-    src_start: usize,
-    src_end: usize,
+    pub src_line: usize,
+    pub src_start: usize,
+    pub src_end: usize,
 }
 
 impl Token {

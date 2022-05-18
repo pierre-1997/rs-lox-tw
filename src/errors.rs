@@ -8,6 +8,8 @@ pub enum RuntimeErrorType {
     ExpectedNumberOperand,
     ExpectedNumberOperands,
     ExpectedAddableOperands,
+    InvalidCallObjectType,
+    InvalidArgsCount,
 }
 
 #[derive(Debug)]
@@ -102,9 +104,14 @@ impl fmt::Display for LoxError {
                 RuntimeErrorType::ExpectedNumberOperands => {
                     write!(f, "Both operands must be a number.")?
                 }
-
+                RuntimeErrorType::InvalidCallObjectType => {
+                    write!(f, "Can only call functions and classes.")?
+                }
                 RuntimeErrorType::ExpectedAddableOperands => {
                     write!(f, "Operands must be two numbers or two strings.")?
+                }
+                RuntimeErrorType::InvalidArgsCount => {
+                    write!(f, "Invalid argument count for function or class.")?
                 }
             },
 
