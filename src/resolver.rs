@@ -131,7 +131,7 @@ impl<'a> Resolver<'a> {
             .insert(name.lexeme.clone(), true);
     }
 
-    fn resolve_stmts(&self, stmts: &Rc<Vec<Rc<Stmt>>>) -> Result<(), LoxResult> {
+    fn resolve_stmts(&self, stmts: &Vec<Rc<Stmt>>) -> Result<(), LoxResult> {
         stmts.iter().try_for_each(|stmt| self.resolve_stmt(stmt))
     }
 
