@@ -4,7 +4,7 @@ use std::rc::Rc;
 use crate::lox_function::LoxFunction;
 use crate::lox_native::NativeFunction;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Object {
     Num(f64),
     Str(String),
@@ -13,6 +13,20 @@ pub enum Object {
     False,
     Function(Rc<LoxFunction>),
     Native(Rc<NativeFunction>),
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Object::Num(a), Object::Num(b)) => a == b,
+            (Object::Str(a), Object::Str(b)) => a == b,
+            (Object::True, Object::True) => true,
+            (Object::False, Object::False) => true,
+            (Object::Nil, Object::Nil) => true,
+
+            _ => false,
+        }
+    }
 }
 
 impl From<bool> for Object {

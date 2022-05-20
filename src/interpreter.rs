@@ -23,14 +23,14 @@ pub struct Interpreter {
 }
 
 impl ExprVisitor<Object> for Interpreter {
-    fn visit_literal_expr(&self, expr: &LiteralExpr) -> Result<Object, LoxResult> {
-        Ok(expr.value.clone().unwrap())
+    fn visit_literal_expr(&mut self, value: &Option<Object>) -> Result<Object, LoxResult> {
+        Ok(value.clone().unwrap())
     }
 
-    fn visit_unary_expr(&self, expr: &UnaryExpr) -> Result<Object, LoxResult> {
-        let right = self.evaluate(&expr.right)?;
+    fn visit_unary_expr(&mut self, operator: &Token, right: &Expr) -> Result<Object, LoxResult> {
+        let right = self.evaluate(right)?;
 
-        match expr.operator.ttype {
+        match operator.ttype {
             TokenType::Minus => {
                 if let Object::Num(x) = right {
                     Ok(Object::Num(-x))
@@ -47,26 +47,31 @@ impl ExprVisitor<Object> for Interpreter {
         }
     }
 
-    fn visit_assign_expr(&self, expr: &AssignExpr) -> Result<Object, LoxResult> {
-        let value = self.evaluate(&expr.value)?;
+    fn visit_assign_expr(&mut self, name: &Token, value: &Expr) -> Result<Object, LoxResult> {
+        let value = self.evaluate(value)?;
 
         self.environment
             .borrow()
             .borrow_mut()
-            .assign(expr.name.dup(), value.clone())?;
+            .assign(name.clone(), value.clone())?;
 
         Ok(value)
     }
 
-    fn visit_grouping_expr(&self, expr: &GroupingExpr) -> Result<Object, LoxResult> {
-        self.evaluate(&expr.expression)
+    fn visit_grouping_expr(&mut self, expression: &Expr) -> Result<Object, LoxResult> {
+        self.evaluate(expression)
     }
 
-    fn visit_binary_expr(&self, expr: &BinaryExpr) -> Result<Object, LoxResult> {
-        let left = self.evaluate(&expr.left)?;
-        let right = self.evaluate(&expr.right)?;
+    fn visit_binary_expr(
+        &mut self,
+        left: &Expr,
+        operator: &Token,
+        right: &Expr,
+    ) -> Result<Object, LoxResult> {
+        let left = self.evaluate(left)?;
+        let right = self.evaluate(right)?;
 
-        match expr.operator.ttype {
+        match operator.ttype {
             TokenType::Minus => {
                 if let Object::Num(left) = left {
                     if let Object::Num(right) = right {
@@ -193,14 +198,19 @@ impl ExprVisitor<Object> for Interpreter {
         }
     }
 
-    fn visit_variable_expr(&self, expr: &VariableExpr) -> Result<Object, LoxResult> {
-        self.look_up_env(&expr.name)
+    fn visit_variable_expr(&mut self, name: &Token) -> Result<Object, LoxResult> {
+        self.look_up_env(name)
     }
 
-    fn visit_logical_expr(&self, expr: &LogicalExpr) -> Result<Object, LoxResult> {
-        let left = self.evaluate(&expr.left)?;
+    fn visit_logical_expr(
+        &mut self,
+        left: &Expr,
+        operator: &Token,
+        right: &Expr,
+    ) -> Result<Object, LoxResult> {
+        let left = self.evaluate(left)?;
 
-        if expr.operator.ttype == TokenType::Or {
+        if operator.ttype == TokenType::Or {
             if self.is_truthy(left.clone()) {
                 return Ok(left);
             }
@@ -208,18 +218,23 @@ impl ExprVisitor<Object> for Interpreter {
             return Ok(left);
         }
 
-        self.evaluate(&expr.right)
+        self.evaluate(right)
     }
 
-    fn visit_call_expr(&self, expr: &CallExpr) -> Result<Object, LoxResult> {
+    fn visit_call_expr(
+        &mut self,
+        callee: &Expr,
+        _paren: &Token,
+        arguments: &Vec<Expr>,
+    ) -> Result<Object, LoxResult> {
         // Get the expression's callee
-        let callee = self.evaluate(&expr.callee)?;
+        let callee = self.evaluate(callee)?;
 
         // Optional vector of arguments
-        let mut arguments: Vec<Object> = Vec::new();
+        let mut call_args: Vec<Object> = Vec::new();
         // Evaluate each calling argument
-        for argument in &expr.arguments {
-            arguments.push(self.evaluate(argument)?);
+        for argument in arguments {
+            call_args.push(self.evaluate(argument)?);
         }
 
         // Try to interpret the callee as a callable object (e.g function or class)
@@ -244,50 +259,60 @@ impl ExprVisitor<Object> for Interpreter {
         }
 
         // Return the function's call result
-        called_function.call(self, arguments)
+        called_function.call(self, call_args)
     }
 }
 
 impl StmtVisitor<()> for Interpreter {
-    fn visit_expression_stmt(&self, stmt: &ExpressionStmt) -> Result<(), LoxResult> {
-        if let Err(e) = self.evaluate(&stmt.expression) {
+    fn visit_expression_stmt(&mut self, expression: &Expr) -> Result<(), LoxResult> {
+        if let Err(e) = self.evaluate(expression) {
             eprintln!("{}", e);
         }
 
         Ok(())
     }
 
-    fn visit_print_stmt(&self, stmt: &PrintStmt) -> Result<(), LoxResult> {
-        let value = self.evaluate(&stmt.expression)?;
+    fn visit_print_stmt(&mut self, expression: &Expr) -> Result<(), LoxResult> {
+        let value = self.evaluate(expression)?;
         println!("{}", value);
 
         Ok(())
     }
 
-    fn visit_var_stmt(&self, stmt: &VarStmt) -> Result<(), LoxResult> {
+    fn visit_var_stmt(
+        &mut self,
+        name: &Token,
+        initializer: &Option<Expr>,
+    ) -> Result<(), LoxResult> {
         let mut value = Object::Nil;
 
-        if stmt.initializer.is_some() {
-            value = self.evaluate(stmt.initializer.as_ref().unwrap())?;
+        if initializer.is_some() {
+            value = self.evaluate(initializer.as_ref().unwrap())?;
         }
 
         self.environment
             .borrow()
             .borrow_mut()
-            .define(stmt.name.lexeme.clone(), value);
+            .define(name.lexeme.clone(), value);
 
         Ok(())
     }
 
-    fn visit_block_stmt(&self, stmt: &BlockStmt) -> Result<(), LoxResult> {
+    fn visit_block_stmt(&mut self, statements: &Vec<Stmt>) -> Result<(), LoxResult> {
         let env = Environment::from_enclosing(self.environment.borrow().clone());
-        self.execute_block(&stmt.statements, env)
+        self.execute_block(statements, env)
     }
 
-    fn visit_if_stmt(&self, stmt: &IfStmt) -> Result<(), LoxResult> {
-        if self.is_truthy(self.evaluate(&stmt.condition)?) {
-            self.execute(&stmt.then_branch)?;
-        } else if let Some(else_branch) = &stmt.else_branch {
+    fn visit_if_stmt(
+        &mut self,
+        condition: &Expr,
+        then_branch: &Stmt,
+        else_branch: &Option<Stmt>,
+    ) -> Result<(), LoxResult> {
+        let condition_value = self.evaluate(condition)?;
+        if self.is_truthy(condition_value) {
+            self.execute(then_branch)?;
+        } else if let Some(else_branch) = else_branch {
             self.execute(else_branch)?;
         }
 
@@ -300,8 +325,12 @@ impl StmtVisitor<()> for Interpreter {
      * Note: This function will use the LoxResult enum in order to return an actual value instead
      * of an error.
      */
-    fn visit_return_stmt(&self, stmt: &ReturnStmt) -> Result<(), LoxResult> {
-        if let Some(v) = &stmt.value {
+    fn visit_return_stmt(
+        &mut self,
+        _keyword: &Token,
+        value: &Option<Expr>,
+    ) -> Result<(), LoxResult> {
+        if let Some(v) = &value {
             Err(LoxResult::ReturnValue {
                 value: self.evaluate(v)?,
             })
@@ -310,26 +339,38 @@ impl StmtVisitor<()> for Interpreter {
         }
     }
 
-    fn visit_while_stmt(&self, stmt: &WhileStmt) -> Result<(), LoxResult> {
-        while self.is_truthy(self.evaluate(&stmt.condition)?) {
-            self.execute(&stmt.body)?;
+    fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<(), LoxResult> {
+        loop {
+            let condition_value = self.evaluate(condition)?;
+            if !self.is_truthy(condition_value) {
+                break;
+            }
+
+            self.execute(body)?;
         }
 
         Ok(())
     }
 
-    fn visit_function_stmt(&self, stmt: &FunctionStmt) -> Result<(), LoxResult> {
+    fn visit_function_stmt(
+        &mut self,
+        name: &Token,
+        params: &Vec<Token>,
+        body: &Vec<Stmt>,
+    ) -> Result<(), LoxResult> {
         // Instanciate a new function object using its statement
-        let function = Object::Function(Rc::new(LoxFunction::new(
-            stmt,
-            self.environment.borrow().deref(),
-        )));
+        let function = Object::Function(Rc::new(LoxFunction {
+            name: name.clone(),
+            params: params.clone(),
+            body: body.clone(),
+            closure: Rc::clone(self.environment.borrow().deref()),
+        }));
 
         // Define the function in the current environment
         self.environment
             .borrow_mut()
             .borrow_mut()
-            .define(stmt.name.lexeme.clone(), function);
+            .define(name.lexeme.clone(), function);
 
         Ok(())
     }
@@ -352,7 +393,7 @@ impl Interpreter {
         }
     }
 
-    pub fn evaluate(&self, expr: &Expr) -> Result<Object, LoxResult> {
+    pub fn evaluate(&mut self, expr: &Expr) -> Result<Object, LoxResult> {
         expr.accept(self)
     }
 
@@ -360,7 +401,7 @@ impl Interpreter {
         !(obj == Object::Nil || obj == Object::False)
     }
 
-    pub fn interpret(&self, statements: &[Stmt]) -> Result<(), LoxResult> {
+    pub fn interpret(&mut self, statements: &[Stmt]) -> Result<(), LoxResult> {
         for statement in statements {
             self.execute(statement)?;
         }
@@ -368,11 +409,11 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn execute(&self, stmt: &Stmt) -> Result<(), LoxResult> {
+    pub fn execute(&mut self, stmt: &Stmt) -> Result<(), LoxResult> {
         stmt.accept(self)
     }
 
-    pub fn execute_block(&self, stmts: &Vec<Rc<Stmt>>, env: Environment) -> Result<(), LoxResult> {
+    pub fn execute_block(&mut self, stmts: &[Stmt], env: Environment) -> Result<(), LoxResult> {
         let prev_env = self.environment.replace(Rc::new(RefCell::new(env)));
 
         let ret = stmts.iter().try_for_each(|stmt| self.execute(stmt));

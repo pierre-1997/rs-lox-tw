@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::errors::{LoxResult, ParserErrorType};
 use crate::expr::*;
 use crate::object::Object;
@@ -122,9 +120,7 @@ impl<'a> Parser<'a> {
                 }
 
                 // Parse the next param and save it
-                params.push(Rc::new(
-                    self.consume(TokenType::Identifier, "Expected parameter name here.")?,
-                ));
+                params.push(self.consume(TokenType::Identifier, "Expected parameter name here.")?);
                 // If the next token is not a comma, we finished parsing the parameters
                 if !self.matchs_next(&[TokenType::Comma]) {
                     break;
@@ -148,11 +144,7 @@ impl<'a> Parser<'a> {
         let body = self.block_statement()?;
 
         // Return the build Function Stmt
-        Ok(Stmt::Function(FunctionStmt {
-            name,
-            params: Rc::new(params),
-            body: Rc::new(body),
-        }))
+        Ok(Stmt::Function { name, params, body })
     }
 
     /**
@@ -175,7 +167,7 @@ impl<'a> Parser<'a> {
         )?;
 
         // Return a non-initialized VarStmt
-        Ok(Stmt::Var(VarStmt { name, initializer }))
+        Ok(Stmt::Var { name, initializer })
     }
 
     /**
@@ -210,7 +202,7 @@ impl<'a> Parser<'a> {
         // Check if the next token is a scope opening left brace '{'
         if self.matchs_next(&[TokenType::LeftBrace]) {
             let stmts = self.block_statement()?;
-            return Ok(Stmt::Block(BlockStmt { statements: stmts }));
+            return Ok(Stmt::Block { statements: stmts });
         }
 
         // Otherwise, parse an expression statement
@@ -282,34 +274,31 @@ impl<'a> Parser<'a> {
         // If there were an increment, write an iteration of it at the end of the body.
         // e.g in the example above: "i = i + 1"
         if let Some(i) = increment {
-            body = Stmt::Block(BlockStmt {
-                statements: vec![
-                    Rc::new(body),
-                    Rc::new(Stmt::Expression(ExpressionStmt { expression: i })),
-                ],
-            })
+            body = Stmt::Block {
+                statements: vec![body, Stmt::Expression { expression: i }],
+            }
         }
 
         // If there weren't any condition, write a true literal expression instead to a perform a
         // while (true) infinite loop.
         if condition.is_none() {
-            condition = Some(Expr::Literal(LiteralExpr {
+            condition = Some(Expr::Literal {
                 value: Some(Object::True),
-            }));
+            });
         }
 
         // Put the current body into a while expression with its condition
-        body = Stmt::While(WhileStmt {
+        body = Stmt::While {
             condition: condition.unwrap(),
             body: Box::new(body),
-        });
+        };
 
         // If there were any initializer, put it at the beggining of the new tranformed code
         // e.g in the example above: "var i = 0;"
         if initializer.is_some() {
-            body = Stmt::Block(BlockStmt {
-                statements: vec![Rc::new(initializer.unwrap()), Rc::new(body)],
-            });
+            body = Stmt::Block {
+                statements: vec![initializer.unwrap(), body],
+            };
         }
 
         Ok(body)
@@ -324,17 +313,17 @@ impl<'a> Parser<'a> {
         )?;
 
         let then_branch = self.statement()?;
-        let mut else_branch = None;
+        let mut else_branch = Box::new(None);
 
         if self.matchs_next(&[TokenType::Else]) {
-            else_branch = Some(Box::new(self.statement()?));
+            else_branch = Box::new(Some(self.statement()?));
         }
 
-        Ok(Stmt::If(IfStmt {
+        Ok(Stmt::If {
             condition,
             then_branch: Box::new(then_branch),
             else_branch,
-        }))
+        })
     }
 
     /**
@@ -346,7 +335,7 @@ impl<'a> Parser<'a> {
         // Check the statement ends with a semicolon.
         self.consume(TokenType::Semicolon, "Expected ';' after value.")?;
         // Return the parsed print statement
-        Ok(Stmt::Print(PrintStmt { expression: value }))
+        Ok(Stmt::Print { expression: value })
     }
 
     /**
@@ -362,7 +351,7 @@ impl<'a> Parser<'a> {
 
         self.consume(TokenType::Semicolon, "Expected ';' after return statement.")?;
 
-        Ok(Stmt::Return(ReturnStmt { keyword, value }))
+        Ok(Stmt::Return { keyword, value })
     }
 
     /**
@@ -377,18 +366,18 @@ impl<'a> Parser<'a> {
         )?;
         let body = self.statement()?;
 
-        Ok(Stmt::While(WhileStmt {
+        Ok(Stmt::While {
             condition,
             body: Box::new(body),
-        }))
+        })
     }
 
-    fn block_statement(&mut self) -> Result<Vec<Rc<Stmt>>, LoxResult> {
+    fn block_statement(&mut self) -> Result<Vec<Stmt>, LoxResult> {
         let mut stmts = Vec::new();
 
         while !self.check(TokenType::RightBrace) && !self.is_at_end() {
             if let Some(s) = self.declaration()? {
-                stmts.push(Rc::new(s));
+                stmts.push(s);
             }
         }
 
@@ -409,7 +398,7 @@ impl<'a> Parser<'a> {
         // Check the expression ends with a semicolon.
         self.consume(TokenType::Semicolon, "Expected ';' after expression.")?;
         // Return the parsed expression
-        Ok(Stmt::Expression(ExpressionStmt { expression: expr }))
+        Ok(Stmt::Expression { expression: expr })
     }
 
     /**
@@ -427,12 +416,11 @@ impl<'a> Parser<'a> {
             let equals = self.previous();
             let value = self.assignment()?;
 
-            if let Expr::Variable(var_expr) = expr {
-                let name = var_expr.name;
-                return Ok(Expr::Assign(AssignExpr {
+            if let Expr::Variable { name } = expr {
+                return Ok(Expr::Assign {
                     name,
                     value: Box::new(value),
-                }));
+                });
             }
 
             return Err(LoxResult::Parser {
@@ -459,11 +447,11 @@ impl<'a> Parser<'a> {
             // Get the right part of the expression
             let right = self.comparison()?;
             // Build the binary expression
-            expr = Expr::Binary(BinaryExpr {
+            expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            });
+            };
         }
 
         // Return the parsed expression
@@ -489,11 +477,11 @@ impl<'a> Parser<'a> {
             // Take the next token as the right member of the comparison
             let right = self.term()?;
             // Build the comparison in a binary expression
-            expr = Expr::Binary(BinaryExpr {
+            expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            });
+            };
         }
 
         // Return the built expression
@@ -514,11 +502,11 @@ impl<'a> Parser<'a> {
             // Take the next token as the right member of the expression
             let right = self.factor()?;
             // Build the terminal expression in a binary one
-            expr = Expr::Binary(BinaryExpr {
+            expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            });
+            };
         }
 
         // Return the built expression
@@ -539,11 +527,11 @@ impl<'a> Parser<'a> {
             // Take the right member of the expression as an unary expression
             let right = self.unary()?;
             // Build factor expression using binary one
-            expr = Expr::Binary(BinaryExpr {
+            expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            });
+            };
         }
 
         // Return the built expression
@@ -557,11 +545,11 @@ impl<'a> Parser<'a> {
             let operator = self.previous();
             let right = self.and()?;
 
-            expr = Expr::Logical(LogicalExpr {
+            expr = Expr::Logical {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            });
+            };
         }
 
         Ok(expr)
@@ -574,11 +562,11 @@ impl<'a> Parser<'a> {
             let operator = self.previous();
             let right = self.equality()?;
 
-            expr = Expr::Logical(LogicalExpr {
+            expr = Expr::Logical {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            });
+            };
         }
 
         Ok(expr)
@@ -598,10 +586,10 @@ impl<'a> Parser<'a> {
             // (recursive)
             let right = self.unary()?;
             // Build the unary expression and return it
-            return Ok(Expr::Unary(UnaryExpr {
+            return Ok(Expr::Unary {
                 operator,
                 right: Box::new(right),
-            }));
+            });
         }
 
         // Take the next token as a call expression
@@ -639,7 +627,7 @@ impl<'a> Parser<'a> {
                 }
 
                 // Parse and store the next argument
-                arguments.push(Rc::new(self.expression()?));
+                arguments.push(self.expression()?);
 
                 // Stop when the next token is not a comma
                 if !self.matchs_next(&[TokenType::Comma]) {
@@ -655,11 +643,11 @@ impl<'a> Parser<'a> {
         )?;
 
         // Instanciate and return the function call expression
-        Ok(Expr::Call(CallExpr {
+        Ok(Expr::Call {
             callee: Box::new(callee),
             paren,
             arguments,
-        }))
+        })
     }
 
     /**
@@ -669,37 +657,37 @@ impl<'a> Parser<'a> {
     fn primary(&mut self) -> Result<Expr, LoxResult> {
         // Parse False
         if self.matchs_next(&[TokenType::False]) {
-            return Ok(Expr::Literal(LiteralExpr {
+            return Ok(Expr::Literal {
                 value: Some(Object::False),
-            }));
+            });
         }
 
         // Parse True
         if self.matchs_next(&[TokenType::True]) {
-            return Ok(Expr::Literal(LiteralExpr {
+            return Ok(Expr::Literal {
                 value: Some(Object::True),
-            }));
+            });
         }
 
         // Parse Nil
         if self.matchs_next(&[TokenType::Nil]) {
-            return Ok(Expr::Literal(LiteralExpr {
+            return Ok(Expr::Literal {
                 value: Some(Object::Nil),
-            }));
+            });
         }
 
         // Parse a number or a string
         if self.matchs_next(&[TokenType::Number, TokenType::String]) {
-            return Ok(Expr::Literal(LiteralExpr {
+            return Ok(Expr::Literal {
                 value: self.previous().literal,
-            }));
+            });
         }
 
         // Parse an identifier
         if self.matchs_next(&[TokenType::Identifier]) {
-            return Ok(Expr::Variable(VariableExpr {
+            return Ok(Expr::Variable {
                 name: self.previous(),
-            }));
+            });
         }
 
         // Parse en parenthesized/group expression
@@ -709,9 +697,9 @@ impl<'a> Parser<'a> {
             // Look for the closing ')' after the grouped expression
             self.consume(TokenType::RightParen, "Expected ')' after expression.")?;
             // Return the built group expression
-            return Ok(Expr::Grouping(GroupingExpr {
+            return Ok(Expr::Grouping {
                 expression: Box::new(expr),
-            }));
+            });
         }
 
         // Error out because we expected an expression here

@@ -3,7 +3,7 @@ use std::fmt;
 use crate::object::Object;
 use crate::token_type::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub ttype: TokenType,
     pub lexeme: String,
@@ -13,6 +13,7 @@ pub struct Token {
     pub src_end: usize,
 }
 
+// TODO: Should we compare token position too ?
 impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
         self.ttype == other.ttype && self.lexeme == other.lexeme && self.literal == other.literal

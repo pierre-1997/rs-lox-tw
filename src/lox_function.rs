@@ -7,15 +7,15 @@ use crate::errors::LoxResult;
 use crate::interpreter::Interpreter;
 use crate::lox_callable::LoxCallable;
 use crate::object::Object;
-use crate::stmt::FunctionStmt;
 use crate::stmt::Stmt;
 use crate::token::Token;
 
+#[derive(Clone)]
 pub struct LoxFunction {
-    name: Token,
-    params: Rc<Vec<Rc<Token>>>,
-    body: Rc<Vec<Rc<Stmt>>>,
-    closure: Rc<RefCell<Environment>>,
+    pub name: Token,
+    pub params: Vec<Token>,
+    pub body: Vec<Stmt>,
+    pub closure: Rc<RefCell<Environment>>,
 }
 
 impl fmt::Debug for LoxFunction {
@@ -24,38 +24,12 @@ impl fmt::Debug for LoxFunction {
     }
 }
 
-impl Clone for LoxFunction {
-    fn clone(&self) -> Self {
-        Self {
-            name: self.name.dup(),
-            params: Rc::clone(&self.params),
-            body: Rc::clone(&self.body),
-            closure: Rc::clone(&self.closure),
-        }
-    }
-}
-
-impl LoxFunction {
-    pub fn new(declaration: &FunctionStmt, closure: &Rc<RefCell<Environment>>) -> Self {
-        Self {
-            name: declaration.name.dup(),
-            params: Rc::clone(&declaration.params),
-            body: Rc::clone(&declaration.body),
-            closure: Rc::clone(closure),
-        }
-    }
-}
-
-impl PartialEq for LoxFunction {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-            && Rc::ptr_eq(&self.params, &other.params)
-            && Rc::ptr_eq(&self.body, &other.body)
-    }
-}
-
 impl LoxCallable for LoxFunction {
-    fn call(&self, interpreter: &Interpreter, arguments: Vec<Object>) -> Result<Object, LoxResult> {
+    fn call(
+        &self,
+        interpreter: &mut Interpreter,
+        arguments: Vec<Object>,
+    ) -> Result<Object, LoxResult> {
         let mut env = Environment::from_enclosing(Rc::clone(&self.closure));
 
         for i in 0..self.params.len() {

@@ -68,7 +68,7 @@ pub fn run_prompt() -> io::Result<()> {
 pub fn run(source: String) {
     let mut scanner = Scanner::new(source);
     // let printer = AstPrinter;
-    let interpreter = Interpreter::new();
+    let mut interpreter = Interpreter::new();
 
     if let Ok(tokens) = scanner.scan_tokens() {
         let mut parser = Parser::new(tokens);
