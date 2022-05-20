@@ -8,13 +8,9 @@ use crate::interpreter::Interpreter;
 use crate::lox_callable::LoxCallable;
 use crate::object::Object;
 use crate::stmt::FunctionStmt;
-use crate::stmt::Stmt;
-use crate::token::Token;
 
 pub struct LoxFunction {
-    pub name: Token,
-    pub params: Rc<Vec<Token>>,
-    pub body: Rc<Vec<Rc<Stmt>>>,
+    declaration: Rc<FunctionStmt>,
     closure: Rc<RefCell<Environment>>,
 }
 
@@ -27,20 +23,16 @@ impl fmt::Debug for LoxFunction {
 impl Clone for LoxFunction {
     fn clone(&self) -> Self {
         Self {
-            name: self.name.dup(),
-            params: Rc::clone(&self.params),
-            body: Rc::clone(&self.body),
+            declaration: Rc::clone(&self.declaration),
             closure: Rc::clone(&self.closure),
         }
     }
 }
 
 impl LoxFunction {
-    pub fn new(declaration: &FunctionStmt, closure: &Rc<RefCell<Environment>>) -> Self {
+    pub fn new(declaration: &Rc<FunctionStmt>, closure: &Rc<RefCell<Environment>>) -> Self {
         Self {
-            name: declaration.name.dup(),
-            params: declaration.params.clone(),
-            body: declaration.body.clone(),
+            declaration: Rc::clone(declaration),
             closure: Rc::clone(closure),
         }
     }
@@ -48,9 +40,9 @@ impl LoxFunction {
 
 impl PartialEq for LoxFunction {
     fn eq(&self, other: &Self) -> bool {
-        self.name.ttype == other.name.ttype
-            && Rc::ptr_eq(&self.params, &other.params)
-            && Rc::ptr_eq(&self.body, &other.body)
+        self.declaration.name == other.declaration.name
+            && Rc::ptr_eq(&self.declaration.params, &other.declaration.params)
+            && Rc::ptr_eq(&self.declaration.body, &other.declaration.body)
     }
 }
 
@@ -58,14 +50,16 @@ impl LoxCallable for LoxFunction {
     fn call(&self, interpreter: &Interpreter, arguments: Vec<Object>) -> Result<Object, LoxResult> {
         let mut env = Environment::from_enclosing(Rc::clone(&self.closure));
 
-        for i in 0..self.params.len() {
+        for i in 0..self.declaration.params.len() {
             env.define(
-                self.params.get(i).unwrap().lexeme.clone(),
+                self.declaration.params.get(i).unwrap().lexeme.clone(),
                 arguments.get(i).unwrap().clone(),
             );
         }
 
-        if let Err(LoxResult::ReturnValue { value }) = interpreter.execute_block(&self.body, env) {
+        if let Err(LoxResult::ReturnValue { value }) =
+            interpreter.execute_block(&self.declaration.body, env)
+        {
             return Ok(value);
         }
 
@@ -73,7 +67,7 @@ impl LoxCallable for LoxFunction {
     }
 
     fn arity(&self) -> usize {
-        self.params.len()
+        self.declaration.params.len()
     }
 }
 
@@ -82,8 +76,9 @@ impl fmt::Display for LoxFunction {
         write!(
             f,
             "<fn {}({})>",
-            self.name.lexeme,
-            self.params
+            self.declaration.name.lexeme,
+            self.declaration
+                .params
                 .iter()
                 .map(|x| x.lexeme.clone())
                 .collect::<Vec<String>>()

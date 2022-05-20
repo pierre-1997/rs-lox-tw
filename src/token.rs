@@ -13,6 +13,12 @@ pub struct Token {
     pub src_end: usize,
 }
 
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        self.ttype == other.ttype && self.lexeme == other.lexeme && self.literal == other.literal
+    }
+}
+
 impl Token {
     pub fn location(&self) -> String {
         format!(

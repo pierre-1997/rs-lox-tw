@@ -8,7 +8,7 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
         vec![
             "Assign   : Token name, Box<Expr> value".to_string(),
             "Binary   : Box<Expr> left, Token operator, Box<Expr> right".to_string(),
-            "Call     : Box<Expr> callee, Token paren, Vec<Expr> arguments".to_string(),
+            "Call     : Box<Expr> callee, Token paren, Vec<Rc<Expr>> arguments".to_string(),
             "Logical  : Box<Expr> left, Token operator, Box<Expr> right".to_string(),
             "Unary    : Token operator, Box<Expr> right".to_string(),
             "Grouping : Box<Expr> expression".to_string(),
@@ -21,9 +21,10 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
         output_dir,
         "Stmt",
         vec![
-            "Block      : Rc<Vec<Rc<Stmt>>> statements".to_string(),
+            "Block      : Vec<Rc<Stmt>> statements".to_string(),
             "Expression : Expr expression".to_string(),
-            "Function   : Token name, Rc<Vec<Token>> params, Rc<Vec<Rc<Stmt>>> body".to_string(),
+            "Function   : Token name, Rc<Vec<Rc<Token>>> params, Rc<Vec<Rc<Stmt>>> body"
+                .to_string(),
             "If         : Expr condition, Box<Stmt> then_branch, Option<Box<Stmt>> else_branch"
                 .to_string(),
             "Print      : Expr expression".to_string(),
@@ -39,9 +40,9 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
 fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io::Result<()> {
     let mut file = File::create(output_dir.to_owned() + "/" + &base_name.to_lowercase() + ".rs")?;
 
+    file.write_all(b"use std::rc::Rc;\n\n")?;
     // Imports
     if base_name == "Stmt" {
-        file.write_all(b"use std::rc::Rc;\n\n")?;
         file.write_all(b"use crate::expr::Expr;\n")?;
         file.write_all(b"use crate::token::Token;\n")?;
     } else if base_name == "Expr" {

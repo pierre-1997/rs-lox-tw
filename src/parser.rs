@@ -122,7 +122,9 @@ impl<'a> Parser<'a> {
                 }
 
                 // Parse the next param and save it
-                params.push(self.consume(TokenType::Identifier, "Expected parameter name here.")?);
+                params.push(Rc::new(
+                    self.consume(TokenType::Identifier, "Expected parameter name here.")?,
+                ));
                 // If the next token is not a comma, we finished parsing the parameters
                 if !self.matchs_next(&[TokenType::Comma]) {
                     break;
@@ -143,13 +145,13 @@ impl<'a> Parser<'a> {
         )?;
 
         // Parse the function's body enclosed in {}
-        let body = Rc::new(self.block_statement()?);
+        let body = self.block_statement()?;
 
         // Return the build Function Stmt
         Ok(Stmt::Function(FunctionStmt {
             name,
             params: Rc::new(params),
-            body,
+            body: Rc::new(body),
         }))
     }
 
@@ -208,9 +210,7 @@ impl<'a> Parser<'a> {
         // Check if the next token is a scope opening left brace '{'
         if self.matchs_next(&[TokenType::LeftBrace]) {
             let stmts = self.block_statement()?;
-            return Ok(Stmt::Block(BlockStmt {
-                statements: Rc::new(stmts),
-            }));
+            return Ok(Stmt::Block(BlockStmt { statements: stmts }));
         }
 
         // Otherwise, parse an expression statement
@@ -283,10 +283,10 @@ impl<'a> Parser<'a> {
         // e.g in the example above: "i = i + 1"
         if let Some(i) = increment {
             body = Stmt::Block(BlockStmt {
-                statements: Rc::new(vec![
+                statements: vec![
                     Rc::new(body),
                     Rc::new(Stmt::Expression(ExpressionStmt { expression: i })),
-                ]),
+                ],
             })
         }
 
@@ -308,7 +308,7 @@ impl<'a> Parser<'a> {
         // e.g in the example above: "var i = 0;"
         if initializer.is_some() {
             body = Stmt::Block(BlockStmt {
-                statements: Rc::new(vec![Rc::new(initializer.unwrap()), Rc::new(body)]),
+                statements: vec![Rc::new(initializer.unwrap()), Rc::new(body)],
             });
         }
 
@@ -639,7 +639,7 @@ impl<'a> Parser<'a> {
                 }
 
                 // Parse and store the next argument
-                arguments.push(self.expression()?);
+                arguments.push(Rc::new(self.expression()?));
 
                 // Stop when the next token is not a comma
                 if !self.matchs_next(&[TokenType::Comma]) {

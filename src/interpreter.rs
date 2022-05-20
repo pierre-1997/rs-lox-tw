@@ -372,11 +372,7 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    pub fn execute_block(
-        &self,
-        stmts: &Rc<Vec<Rc<Stmt>>>,
-        env: Environment,
-    ) -> Result<(), LoxResult> {
+    pub fn execute_block(&self, stmts: &Vec<Rc<Stmt>>, env: Environment) -> Result<(), LoxResult> {
         let prev_env = self.environment.replace(Rc::new(RefCell::new(env)));
 
         let ret = stmts.iter().try_for_each(|stmt| self.execute(stmt));
