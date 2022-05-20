@@ -28,6 +28,11 @@ pub enum ParserErrorType {
 }
 
 #[derive(Debug)]
+pub enum ResolverErrorType {
+    VariableNotInitialized,
+}
+
+#[derive(Debug)]
 pub enum EnvironmentErrorType {
     UnknownVariable,
 }
@@ -52,6 +57,10 @@ pub enum LoxResult {
     },
     ReturnValue {
         value: Object,
+    },
+    Resolver {
+        token: Token,
+        error_type: ResolverErrorType,
     },
 }
 
@@ -126,6 +135,15 @@ impl fmt::Display for LoxResult {
 
             // Return value
             LoxResult::ReturnValue { value } => write!(f, "return {}", value)?,
+
+            // Resolver Error
+            LoxResult::Resolver { token, error_type } => match error_type {
+                ResolverErrorType::VariableNotInitialized => write!(
+                    f,
+                    "{} -> Can't read local variable in its own initializer.",
+                    token.location()
+                )?,
+            },
         }
 
         Ok(())

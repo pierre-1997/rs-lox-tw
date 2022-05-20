@@ -22,6 +22,8 @@ mod object;
 mod parser;
 use parser::Parser;
 
+mod resolver;
+
 mod scanner;
 use scanner::*;
 
