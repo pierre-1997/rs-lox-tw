@@ -1,4 +1,5 @@
 use std::fmt;
+use std::hash::Hash;
 
 use crate::object::Object;
 use crate::token_type::*;
@@ -13,12 +14,21 @@ pub struct Token {
     pub src_end: usize,
 }
 
+impl Hash for Token {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.ttype.hash(state);
+        self.lexeme.hash(state);
+    }
+}
+
 // TODO: Should we compare token position too ?
 impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
         self.ttype == other.ttype && self.lexeme == other.lexeme && self.literal == other.literal
     }
 }
+
+impl Eq for Token {}
 
 impl Token {
     pub fn location(&self) -> String {
@@ -36,17 +46,6 @@ impl Token {
             src_line,
             src_start: src_at,
             src_end: src_at + 1,
-        }
-    }
-
-    pub fn dup(&self) -> Token {
-        Token {
-            ttype: self.ttype,
-            lexeme: self.lexeme.to_string(),
-            literal: self.literal.clone(),
-            src_line: self.src_line,
-            src_start: self.src_start,
-            src_end: self.src_end,
         }
     }
 

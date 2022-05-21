@@ -704,7 +704,7 @@ impl<'a> Parser<'a> {
 
         // Error out because we expected an expression here
         Err(LoxResult::Parser {
-            token: self.tokens[self.current].dup(),
+            token: self.tokens[self.current].clone(),
             error_type: ParserErrorType::ExpectedExpression,
             msg: "".to_string(),
         })
@@ -724,7 +724,7 @@ impl<'a> Parser<'a> {
 
         // Error out with the given message string
         Err(LoxResult::Parser {
-            token: self.tokens[self.current].dup(),
+            token: self.tokens[self.current].clone(),
             error_type: ParserErrorType::InvalidConsumeType,
             msg: msg.to_string(),
         })
@@ -791,14 +791,14 @@ impl<'a> Parser<'a> {
      * Returns a copy of the current token in the array.
      */
     fn peek(&self) -> Token {
-        self.tokens[self.current].dup()
+        self.tokens[self.current].clone()
     }
 
     /**
      * Returns a copy of the previous token in the array.
      */
     fn previous(&self) -> Token {
-        self.tokens[self.current - 1].dup()
+        self.tokens[self.current - 1].clone()
     }
 
     /**

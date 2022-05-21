@@ -80,6 +80,27 @@ impl Environment {
         })
     }
 
+    pub fn get_at(&self, distance: usize, name: &Token) -> Result<Object, LoxResult> {
+        self.ancestor(distance).borrow().get(name)
+    }
+
+    fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
+        let parent = self.enclosing.clone().expect("No ancestor at depth 1.");
+        let mut env = Rc::clone(&parent);
+
+        for i in 0..distance {
+            let parent = env
+                .borrow()
+                .enclosing
+                .clone()
+                .unwrap_or_else(|| panic!("No ancestor at depth {i}."));
+
+            env = Rc::clone(&parent);
+        }
+
+        env
+    }
+
     pub fn assign(&mut self, token: Token, value: Object) -> Result<(), LoxResult> {
         // Try inserting in the local variables
         if let Entry::Occupied(mut e) = self.values.entry(token.lexeme.clone()) {
@@ -100,5 +121,11 @@ impl Environment {
                 token.lexeme
             ),
         })
+    }
+
+    pub fn assign_at(&mut self, distance: usize, name: Token, value: Object) {
+        self.ancestor(distance)
+            .borrow_mut()
+            .define(name.lexeme, value);
     }
 }

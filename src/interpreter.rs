@@ -1,5 +1,6 @@
 use std::cell::RefCell;
-use std::ops::Deref;
+use std::collections::HashMap;
+use std::ops::{Deref, Index};
 use std::rc::Rc;
 
 use crate::environment::Environment;
@@ -20,6 +21,7 @@ use crate::token_type::TokenType;
 pub struct Interpreter {
     environment: RefCell<Rc<RefCell<Environment>>>,
     pub env_globals: Rc<RefCell<Environment>>,
+    locals: HashMap<Token, usize>,
 }
 
 impl ExprVisitor<Object> for Interpreter {
@@ -50,10 +52,19 @@ impl ExprVisitor<Object> for Interpreter {
     fn visit_assign_expr(&mut self, name: &Token, value: &Expr) -> Result<Object, LoxResult> {
         let value = self.evaluate(value)?;
 
-        self.environment
-            .borrow()
-            .borrow_mut()
-            .assign(name.clone(), value.clone())?;
+        let distance = self.locals.index(name);
+
+        if distance > &0 {
+            self.environment.borrow().borrow_mut().assign_at(
+                *distance,
+                name.clone(),
+                value.clone(),
+            );
+        } else {
+            self.env_globals
+                .borrow_mut()
+                .assign(name.clone(), value.clone())?;
+        }
 
         Ok(value)
     }
@@ -199,7 +210,7 @@ impl ExprVisitor<Object> for Interpreter {
     }
 
     fn visit_variable_expr(&mut self, name: &Token) -> Result<Object, LoxResult> {
-        self.look_up_env(name)
+        self.look_up_variable(name)
     }
 
     fn visit_logical_expr(
@@ -225,7 +236,7 @@ impl ExprVisitor<Object> for Interpreter {
         &mut self,
         callee: &Expr,
         _paren: &Token,
-        arguments: &Vec<Expr>,
+        arguments: &[Expr],
     ) -> Result<Object, LoxResult> {
         // Get the expression's callee
         let callee = self.evaluate(callee)?;
@@ -298,7 +309,7 @@ impl StmtVisitor<()> for Interpreter {
         Ok(())
     }
 
-    fn visit_block_stmt(&mut self, statements: &Vec<Stmt>) -> Result<(), LoxResult> {
+    fn visit_block_stmt(&mut self, statements: &[Stmt]) -> Result<(), LoxResult> {
         let env = Environment::from_enclosing(self.environment.borrow().clone());
         self.execute_block(statements, env)
     }
@@ -355,14 +366,14 @@ impl StmtVisitor<()> for Interpreter {
     fn visit_function_stmt(
         &mut self,
         name: &Token,
-        params: &Vec<Token>,
-        body: &Vec<Stmt>,
+        params: &[Token],
+        body: &[Stmt],
     ) -> Result<(), LoxResult> {
         // Instanciate a new function object using its statement
         let function = Object::Function(Rc::new(LoxFunction {
             name: name.clone(),
-            params: params.clone(),
-            body: body.clone(),
+            params: params.to_vec(),
+            body: body.to_vec(),
             closure: Rc::clone(self.environment.borrow().deref()),
         }));
 
@@ -390,6 +401,7 @@ impl Interpreter {
         Interpreter {
             environment: RefCell::new(Rc::clone(&globals)),
             env_globals: Rc::clone(&globals),
+            locals: HashMap::new(),
         }
     }
 
@@ -423,11 +435,16 @@ impl Interpreter {
         ret
     }
 
-    pub fn look_up_env(&self, name: &Token) -> Result<Object, LoxResult> {
-        if let Ok(o) = self.environment.borrow().borrow().get(name) {
-            Ok(o)
+    pub fn look_up_variable(&self, name: &Token) -> Result<Object, LoxResult> {
+        let distance = self.locals.index(name);
+        if distance > &0 {
+            Ok(self.environment.borrow().borrow().get_at(*distance, name)?)
         } else {
             self.env_globals.borrow().get(name)
         }
+    }
+
+    pub fn resolve(&mut self, name: &Token, depth: usize) {
+        self.locals.insert(name.clone(), depth);
     }
 }

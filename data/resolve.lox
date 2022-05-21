@@ -1,0 +1,16 @@
+// First case
+var a = "outer";
+{
+  var a = a;
+}
+
+// Second case: Illegal top level return
+return "foo";
+
+// Third case: Variable re-declaration
+fun bad() {
+  var a = "first";
+  var a = "second";
+}
+
+

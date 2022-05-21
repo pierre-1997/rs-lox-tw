@@ -30,6 +30,8 @@ pub enum ParserErrorType {
 #[derive(Debug)]
 pub enum ResolverErrorType {
     VariableNotInitialized,
+    VariableAlreadyExists,
+    TopLevelReturn,
 }
 
 #[derive(Debug)]
@@ -92,12 +94,8 @@ impl fmt::Display for LoxResult {
                 error_type,
                 msg,
             } => match error_type {
-                ParserErrorType::InvalidConsumeType => {
-                    write!(f, "{} -> {}", token.location(), msg)?
-                }
-                ParserErrorType::ExpectedExpression => {
-                    write!(f, "{} -> {}", token.location(), msg)?
-                }
+                ParserErrorType::InvalidConsumeType => write!(f, "{} -> {msg}", token.location())?,
+                ParserErrorType::ExpectedExpression => write!(f, "{} -> {msg}", token.location())?,
                 ParserErrorType::InvalidAssignTarget => {
                     write!(f, "{} -> Invalid assignment target.", token.location())?
                 }
@@ -130,17 +128,28 @@ impl fmt::Display for LoxResult {
 
             // Environment errors
             LoxResult::Environment { error_type, msg } => match error_type {
-                EnvironmentErrorType::UnknownVariable => write!(f, "{}", msg)?,
+                EnvironmentErrorType::UnknownVariable => write!(f, "{msg}")?,
             },
 
             // Return value
-            LoxResult::ReturnValue { value } => write!(f, "return {}", value)?,
+            LoxResult::ReturnValue { value } => write!(f, "return {value}")?,
 
             // Resolver Error
             LoxResult::Resolver { token, error_type } => match error_type {
                 ResolverErrorType::VariableNotInitialized => write!(
                     f,
                     "{} -> Can't read local variable in its own initializer.",
+                    token.location()
+                )?,
+                ResolverErrorType::VariableAlreadyExists => write!(
+                    f,
+                    "{} -> A variable with the name '{}' already exists in this scope.",
+                    token.location(),
+                    token.lexeme
+                )?,
+                ResolverErrorType::TopLevelReturn => write!(
+                    f,
+                    "{} -> Can't return from top level code.",
                     token.location()
                 )?,
             },

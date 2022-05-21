@@ -131,7 +131,7 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
     // Closing the accept() function
     file.write_all(b"    }\n")?;
     // Closing the type impl
-    file.write_all(b"}\n")?;
+    file.write_all(b"}\n\n")?;
 
     // Define the {base_name}Visitor trait
     file.write_all(format!("pub trait {}Visitor<T> {{\n", base_name).as_bytes())?;
@@ -172,6 +172,15 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
                     )
                     .as_bytes(),
                 )?;
+            } else if arg_type.contains("Vec") {
+                file.write_all(
+                    format!(
+                        ", {}: {}",
+                        arg_name,
+                        arg_type.replace("Vec<", "&[").replace('>', "]"),
+                    )
+                    .as_bytes(),
+                )?;
             } else {
                 file.write_all(format!(", {}: &{}", arg_name, arg_type,).as_bytes())?;
             }
@@ -183,136 +192,3 @@ fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io:
 
     Ok(())
 }
-
-/*
-fn define_ast(output_dir: &str, base_name: &str, types: Vec<String>) -> std::io::Result<()> {
-    let mut file = File::create(output_dir.to_owned() + "/" + &base_name.to_lowercase() + ".rs")?;
-
-    file.write_all(b"use std::rc::Rc;\n\n")?;
-    // Imports
-    if base_name == "Stmt" {
-        file.write_all(b"use crate::expr::Expr;\n")?;
-        file.write_all(b"use crate::token::Token;\n")?;
-    } else if base_name == "Expr" {
-        file.write_all(b"use crate::object::Object;\n")?;
-        file.write_all(b"use crate::token::Token;\n")?;
-    }
-    file.write_all(b"use crate::errors::LoxResult;\n")?;
-    // Additional '\n' after imports
-    file.write_all(b"\n")?;
-
-    // Define Expr enum
-    file.write_all(format!("#[derive(Debug)]\npub enum {} {{\n", base_name).as_bytes())?;
-    for ttype in &types
-        .iter()
-        .map(|s| s.split(':').collect::<Vec<&str>>()[0].trim())
-        .collect::<Vec<&str>>()
-    {
-        file.write_all(format!("    {}({}{}),\n", ttype, ttype, base_name).as_bytes())?;
-    }
-    file.write_all(b"}\n\n")?;
-
-    file.write_all(format!("impl {} {{\n", base_name).as_bytes())?;
-    file.write_all(
-        format!(
-            "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxResult> {{\n",
-            base_name
-        )
-        .as_bytes(),
-    )?;
-    file.write_all(b"        match self {\n")?;
-    for ttype in &types
-        .iter()
-        .map(|s| s.split(':').collect::<Vec<&str>>()[0].trim())
-        .collect::<Vec<&str>>()
-    {
-        file.write_all(
-            format!(
-                "            {}::{}({}e) => {}e.accept(visitor),\n",
-                base_name,
-                ttype,
-                ttype.chars().next().unwrap().to_lowercase(),
-                ttype.chars().next().unwrap().to_lowercase()
-            )
-            .as_bytes(),
-        )?;
-    }
-    file.write_all(b"        }\n")?;
-    file.write_all(b"    }\n")?;
-    file.write_all(b"}\n")?;
-
-    // Define each type struct
-    for t in &types {
-        let splitted = t.split(':').collect::<Vec<&str>>();
-        let ttype = splitted[0].trim();
-        let args = splitted[1].trim();
-
-        file.write_all(
-            format!("#[derive(Debug)]\npub struct {}{} {{\n", ttype, base_name).as_bytes(),
-        )?;
-        for arg in args
-            .split(',')
-            .collect::<Vec<&str>>()
-            .iter()
-            .map(|s| s.trim())
-            .collect::<Vec<&str>>()
-        {
-            let splitted_arg = arg.split(' ').collect::<Vec<&str>>();
-            let arg_type = splitted_arg[0].trim();
-            let arg_name = splitted_arg[1].trim();
-
-            file.write_all(format!("    pub {}: {},\n", arg_name, arg_type).as_bytes())?;
-        }
-        file.write_all(b"}\n\n")?;
-    }
-
-    // Define the {base_name}Visitor trait
-    file.write_all(format!("pub trait {}Visitor<T> {{\n", base_name).as_bytes())?;
-    for ttype in &types
-        .iter()
-        .map(|s| s.split(':').collect::<Vec<&str>>()[0].trim())
-        .collect::<Vec<&str>>()
-    {
-        file.write_all(
-            format!(
-                "    fn visit_{}_{}(&self, {}: &{}{}) -> Result<T, LoxResult>;\n",
-                ttype.to_lowercase(),
-                base_name.to_lowercase(),
-                base_name.to_lowercase(),
-                ttype,
-                base_name,
-            )
-            .as_bytes(),
-        )?;
-    }
-    file.write_all(b"}")?;
-
-    // Implement each <Type>{base_name}.accept() function
-    for ttype in &types
-        .iter()
-        .map(|s| s.split(':').collect::<Vec<&str>>()[0].trim())
-        .collect::<Vec<&str>>()
-    {
-        file.write_all(format!("\n\nimpl {}{} {{\n", ttype, base_name).as_bytes())?;
-        file.write_all(
-            format!(
-                "    pub fn accept<T>(&self, visitor: &dyn {}Visitor<T>) -> Result<T, LoxResult> {{\n",
-                base_name,
-            )
-            .as_bytes(),
-        )?;
-        file.write_all(
-            format!(
-                "        visitor.visit_{}_{}(self)\n",
-                ttype.to_lowercase(),
-                base_name.to_lowercase()
-            )
-            .as_bytes(),
-        )?;
-        file.write_all(b"    }\n")?;
-        file.write_all(b"}")?;
-    }
-
-    Ok(())
-}
-*/

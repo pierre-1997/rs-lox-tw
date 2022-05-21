@@ -23,8 +23,10 @@ mod parser;
 use parser::Parser;
 
 mod resolver;
+use resolver::Resolver;
 
 mod scanner;
+
 use scanner::*;
 
 mod token;
@@ -69,6 +71,7 @@ pub fn run(source: String) {
     let mut scanner = Scanner::new(source);
     // let printer = AstPrinter;
     let mut interpreter = Interpreter::new();
+    let mut resolver = Resolver::new(&mut interpreter);
 
     if let Ok(tokens) = scanner.scan_tokens() {
         let mut parser = Parser::new(tokens);
@@ -82,6 +85,14 @@ pub fn run(source: String) {
                     println!("Unable to parse with LST.");
                 }
                 */
+                match resolver.resolve_stmts(&stmts) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!("{e}");
+                        return;
+                    }
+                }
+
                 match interpreter.interpret(&stmts) {
                     Ok(_) => {}
                     Err(e) => {
