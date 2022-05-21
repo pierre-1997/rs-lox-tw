@@ -7,6 +7,7 @@ use crate::environment::Environment;
 use crate::errors::{LoxResult, RuntimeErrorType};
 use crate::expr::*;
 use crate::lox_callable::LoxCallable;
+use crate::lox_class::LoxClass;
 use crate::lox_function::LoxFunction;
 use crate::lox_native::NativeFunction;
 use crate::native_functions::NativeClock;
@@ -61,9 +62,7 @@ impl ExprVisitor<Object> for Interpreter {
                 value.clone(),
             );
         } else {
-            self.env_globals
-                .borrow_mut()
-                .assign(name.clone(), value.clone())?;
+            self.env_globals.borrow_mut().assign(name, value.clone())?;
         }
 
         Ok(value)
@@ -385,6 +384,21 @@ impl StmtVisitor<()> for Interpreter {
 
         Ok(())
     }
+
+    fn visit_class_stmt(&mut self, name: &Token, _methods: &[Stmt]) -> Result<(), LoxResult> {
+        self.environment
+            .borrow()
+            .borrow_mut()
+            .define(name.lexeme.clone(), Object::Nil);
+
+        let class = Object::Class(Rc::new(LoxClass {
+            name: name.lexeme.clone(),
+        }));
+
+        self.environment.borrow().borrow_mut().assign(name, class)?;
+
+        Ok(())
+    }
 }
 
 impl Interpreter {
@@ -436,8 +450,7 @@ impl Interpreter {
     }
 
     pub fn look_up_variable(&self, name: &Token) -> Result<Object, LoxResult> {
-        let distance = self.locals.index(name);
-        if distance > &0 {
+        if let Some(distance) = self.locals.get(name) {
             Ok(self.environment.borrow().borrow().get_at(*distance, name)?)
         } else {
             self.env_globals.borrow().get(name)

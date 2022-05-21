@@ -101,7 +101,7 @@ impl Environment {
         env
     }
 
-    pub fn assign(&mut self, token: Token, value: Object) -> Result<(), LoxResult> {
+    pub fn assign(&mut self, token: &Token, value: Object) -> Result<(), LoxResult> {
         // Try inserting in the local variables
         if let Entry::Occupied(mut e) = self.values.entry(token.lexeme.clone()) {
             e.insert(value);

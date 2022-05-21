@@ -12,6 +12,7 @@ mod interpreter;
 use interpreter::Interpreter;
 
 mod lox_callable;
+mod lox_class;
 mod lox_function;
 mod lox_native;
 

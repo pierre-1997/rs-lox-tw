@@ -1,6 +1,7 @@
 use std::fmt;
 use std::rc::Rc;
 
+use crate::lox_class::LoxClass;
 use crate::lox_function::LoxFunction;
 use crate::lox_native::NativeFunction;
 
@@ -13,6 +14,7 @@ pub enum Object {
     False,
     Function(Rc<LoxFunction>),
     Native(Rc<NativeFunction>),
+    Class(Rc<LoxClass>),
 }
 
 impl PartialEq for Object {
@@ -66,6 +68,7 @@ impl fmt::Display for Object {
             Self::False => write!(f, "false"),
             Self::Function(fun) => write!(f, "{}", fun),
             Self::Native(fun) => write!(f, "{}", fun),
+            Self::Class(class) => write!(f, "{class}"),
         }
     }
 }

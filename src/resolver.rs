@@ -104,6 +104,13 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
 
         Ok(())
     }
+
+    fn visit_class_stmt(&mut self, name: &Token, _methods: &[Stmt]) -> Result<(), LoxResult> {
+        self.declare(name)?;
+        self.define(name);
+
+        Ok(())
+    }
 }
 
 impl<'a> ExprVisitor<()> for Resolver<'a> {

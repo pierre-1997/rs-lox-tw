@@ -55,6 +55,17 @@ impl<'a> Parser<'a> {
      * Parses the next tokens into a declaration statement.
      */
     fn declaration(&mut self) -> Result<Option<Stmt>, LoxResult> {
+        // If the next token is 'class', parse the class declaration
+        if self.matchs_next(&[TokenType::Class]) {
+            match self.class_declaration() {
+                Ok(s) => return Ok(Some(s)),
+                Err(e) => {
+                    eprintln!("{}", e);
+                    self.synchronize();
+                }
+            }
+        }
+
         // If the next token is 'fun', parse the function definition
         if self.matchs_next(&[TokenType::Fun]) {
             match self.function("function") {
@@ -95,6 +106,32 @@ impl<'a> Parser<'a> {
         }
 
         Ok(None)
+    }
+
+    fn class_declaration(&mut self) -> Result<Stmt, LoxResult> {
+        // Parse the function's name
+        let name = self.consume(TokenType::Identifier, "Expected class name.")?;
+        // Parse the opening '{' starting the class body
+        self.consume(
+            TokenType::LeftBrace,
+            &format!("Expected opening '{{' before class '{name}' body."),
+        )?;
+
+        let mut methods = Vec::new();
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            methods.push(self.function("method")?);
+        }
+
+        // Parse the closing '}' ending the class body
+        self.consume(
+            TokenType::RightBrace,
+            &format!(
+                "Expected closing '}}' at the end of the class '{}' body.",
+                name.lexeme
+            ),
+        )?;
+
+        Ok(Stmt::Class { name, methods })
     }
 
     fn function(&mut self, kind: &str) -> Result<Stmt, LoxResult> {
