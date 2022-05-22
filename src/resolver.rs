@@ -191,6 +191,11 @@ impl<'a> ExprVisitor<()> for Resolver<'a> {
 
         Ok(())
     }
+
+    fn visit_get_expr(&mut self, object: &Expr, _name: &Token) -> Result<(), LoxResult> {
+        self.resolve_expr(object)?;
+        Ok(())
+    }
 }
 
 impl<'a> Resolver<'a> {

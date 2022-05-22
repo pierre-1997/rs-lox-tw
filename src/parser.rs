@@ -639,6 +639,15 @@ impl<'a> Parser<'a> {
         loop {
             if self.matchs_next(&[TokenType::LeftParen]) {
                 expr = self.finish_call(expr)?;
+            } else if self.matchs_next(&[TokenType::Dot]) {
+                let name = self.consume(
+                    TokenType::Identifier,
+                    "Expected identifier after class calling '.'.",
+                )?;
+                expr = Expr::Get {
+                    object: Box::new(expr),
+                    name,
+                };
             } else {
                 break;
             }

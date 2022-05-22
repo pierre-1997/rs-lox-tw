@@ -11,6 +11,8 @@ pub enum RuntimeErrorType {
     ExpectedAddableOperands,
     InvalidCallObjectType,
     InvalidArgsCount,
+    InvalidObjectProperty,
+    UndefinedProperty,
 }
 
 #[derive(Debug)]
@@ -110,23 +112,39 @@ impl fmt::Display for LoxResult {
             // Runtime error
             LoxResult::Runtime { token, error_type } => match error_type {
                 RuntimeErrorType::UnreachableCode => {
-                    writeln!(f, "This code is unreachable.")?;
+                    writeln!(f, "{} -> This code is unreachable.", token.location())?;
                 }
-                RuntimeErrorType::ExpectedNumberOperand => write!(f, "Operand must be a number.")?,
+                RuntimeErrorType::ExpectedNumberOperand => {
+                    write!(f, "{} -> Operand must be a number.", token.location())?
+                }
                 RuntimeErrorType::ExpectedNumberOperands => {
-                    write!(f, "Both operands must be a number.")?
+                    write!(f, "{} -> Both operands must be a number.", token.location())?
                 }
                 RuntimeErrorType::InvalidCallObjectType => write!(
                     f,
                     "{} -> Can only call functions and classes.",
                     token.location()
                 )?,
-                RuntimeErrorType::ExpectedAddableOperands => {
-                    write!(f, "Operands must be two numbers or two strings.")?
+                RuntimeErrorType::ExpectedAddableOperands => write!(
+                    f,
+                    "{} -> Operands must be two numbers or two strings.",
+                    token.location()
+                )?,
+                RuntimeErrorType::InvalidArgsCount => write!(
+                    f,
+                    "{} -> Invalid argument count for {} or class.",
+                    token.location(),
+                    token.lexeme
+                )?,
+                RuntimeErrorType::InvalidObjectProperty => {
+                    write!(f, "{} -> Only classes have properties.", token.location())?
                 }
-                RuntimeErrorType::InvalidArgsCount => {
-                    write!(f, "Invalid argument count for function or class.")?
-                }
+                RuntimeErrorType::UndefinedProperty => write!(
+                    f,
+                    "{} -> Undefined property {} for this class.",
+                    token.location(),
+                    token.lexeme
+                )?,
             },
 
             // Environment errors

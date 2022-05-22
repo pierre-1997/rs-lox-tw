@@ -291,6 +291,19 @@ impl ExprVisitor<Object> for Interpreter {
         // Return the function's call result
         called_function.call(self, call_args, called_class)
     }
+
+    fn visit_get_expr(&mut self, object: &Expr, name: &Token) -> Result<Object, LoxResult> {
+        let obj = self.evaluate(object)?;
+
+        if let Object::Instance(instance) = obj {
+            return instance.get(name);
+        }
+
+        Err(LoxResult::Runtime {
+            token: name.clone(),
+            error_type: RuntimeErrorType::InvalidObjectProperty,
+        })
+    }
 }
 
 impl StmtVisitor<()> for Interpreter {
