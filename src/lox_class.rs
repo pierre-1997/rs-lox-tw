@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
@@ -19,15 +18,11 @@ impl fmt::Display for LoxClass {
     }
 }
 
-impl LoxClass {
-    pub fn instantiate() {}
-}
-
 impl LoxCallable for LoxClass {
     fn call(
         &self,
-        interpreter: &mut Interpreter,
-        arguments: Vec<Object>,
+        _interpreter: &mut Interpreter,
+        _arguments: Vec<Object>,
         class: Option<Rc<LoxClass>>,
     ) -> Result<Object, LoxResult> {
         /*

@@ -30,7 +30,7 @@ impl LoxCallable for LoxFunction {
         &self,
         interpreter: &mut Interpreter,
         arguments: Vec<Object>,
-        class: Option<Rc<LoxClass>>,
+        _class: Option<Rc<LoxClass>>,
     ) -> Result<Object, LoxResult> {
         let mut env = Environment::from_enclosing(Rc::clone(&self.closure));
 

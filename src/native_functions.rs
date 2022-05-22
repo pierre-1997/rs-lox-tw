@@ -13,7 +13,7 @@ impl LoxCallable for NativeClock {
         &self,
         _: &mut Interpreter,
         _: Vec<Object>,
-        class: Option<Rc<LoxClass>>,
+        _class: Option<Rc<LoxClass>>,
     ) -> Result<Object, LoxResult> {
         Ok(Object::Num(
             chrono::offset::Local::now().timestamp_millis() as f64 / 1000.0,
