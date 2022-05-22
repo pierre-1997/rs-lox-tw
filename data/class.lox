@@ -13,3 +13,11 @@ print bagel; // Prints "Bagel instance".
 
 bagel.value = 4;
 print bagel.value; // Prints "4"
+
+class Bacon {
+  eat() {
+    print "Crunch crunch crunch!";
+  }
+}
+
+Bacon().eat(); // Prints "Crunch crunch crunch!".

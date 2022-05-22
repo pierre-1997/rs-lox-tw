@@ -7,6 +7,7 @@ use crate::token::Token;
 pub enum RuntimeErrorType {
     UnreachableCode,
     ExpectedNumberOperand,
+    Panic,
     ExpectedNumberOperands,
     ExpectedAddableOperands,
     InvalidCallObjectType,
@@ -34,6 +35,7 @@ pub enum ResolverErrorType {
     VariableNotInitialized,
     VariableAlreadyExists,
     TopLevelReturn,
+    Panic,
 }
 
 #[derive(Debug)]
@@ -111,6 +113,7 @@ impl fmt::Display for LoxResult {
 
             // Runtime error
             LoxResult::Runtime { token, error_type } => match error_type {
+                RuntimeErrorType::Panic => write!(f, "{} -> WTFDFFFFF !!!", token.location())?,
                 RuntimeErrorType::UnreachableCode => {
                     writeln!(f, "{} -> This code is unreachable.", token.location())?;
                 }
@@ -157,6 +160,7 @@ impl fmt::Display for LoxResult {
 
             // Resolver Error
             LoxResult::Resolver { token, error_type } => match error_type {
+                ResolverErrorType::Panic => write!(f, "{} -> WTFFFF !!!", token.location())?,
                 ResolverErrorType::VariableNotInitialized => write!(
                     f,
                     "{} -> Can't read local variable in its own initializer.",

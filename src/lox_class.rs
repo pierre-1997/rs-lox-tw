@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
@@ -10,6 +11,17 @@ use crate::object::Object;
 #[derive(Debug)]
 pub struct LoxClass {
     pub name: String,
+    pub methods: HashMap<String, Object>,
+}
+
+impl LoxClass {
+    pub fn find_method(&self, name: &str) -> Option<Object> {
+        if let Some(method) = self.methods.get(name) {
+            return Some(method.clone());
+        }
+
+        None
+    }
 }
 
 impl fmt::Display for LoxClass {

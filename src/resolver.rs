@@ -12,6 +12,7 @@ use crate::token::Token;
 enum FunctionType {
     Void,
     Function,
+    Method,
 }
 
 pub struct Resolver<'a> {
@@ -105,9 +106,22 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
         Ok(())
     }
 
-    fn visit_class_stmt(&mut self, name: &Token, _methods: &[Stmt]) -> Result<(), LoxResult> {
+    fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<(), LoxResult> {
         self.declare(name)?;
         self.define(name);
+
+        for method in methods {
+            let (_name, body, params) = if let Stmt::Function { name, params, body } = method {
+                (name, body, params)
+            } else {
+                return Err(LoxResult::Resolver {
+                    token: name.clone(),
+                    error_type: ResolverErrorType::Panic,
+                });
+            };
+
+            self.resolve_function(params, body, FunctionType::Method)?;
+        }
 
         Ok(())
     }

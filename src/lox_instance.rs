@@ -28,6 +28,10 @@ impl LoxInstance {
             return Ok(field.clone());
         }
 
+        if let Some(method) = self.class.find_method(&name.lexeme) {
+            return Ok(method);
+        }
+
         Err(LoxResult::Runtime {
             token: name.clone(),
             error_type: RuntimeErrorType::UndefinedProperty,

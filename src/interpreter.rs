@@ -305,7 +305,12 @@ impl ExprVisitor<Object> for Interpreter {
         })
     }
 
-    fn visit_set_expr(&mut self, object: &Expr, name: &Token, value: &Expr) -> Result<Object, LoxResult> {
+    fn visit_set_expr(
+        &mut self,
+        object: &Expr,
+        name: &Token,
+        value: &Expr,
+    ) -> Result<Object, LoxResult> {
         let obj = self.evaluate(object)?;
 
         if let Object::Instance(instance) = obj {
@@ -433,14 +438,35 @@ impl StmtVisitor<()> for Interpreter {
         Ok(())
     }
 
-    fn visit_class_stmt(&mut self, name: &Token, _methods: &[Stmt]) -> Result<(), LoxResult> {
+    fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<(), LoxResult> {
         self.environment
             .borrow()
             .borrow_mut()
             .define(name.lexeme.clone(), Object::Nil);
 
+        let mut class_methods: HashMap<String, Object> = HashMap::new();
+        for method in methods {
+            let (name, body, params) = if let Stmt::Function { name, params, body } = method {
+                (name, body, params)
+            } else {
+                return Err(LoxResult::Runtime {
+                    token: name.clone(),
+                    error_type: RuntimeErrorType::Panic,
+                });
+            };
+            let function = LoxFunction {
+                name: name.clone(),
+                params: params.clone(),
+                body: body.clone(),
+                closure: Rc::clone(self.environment.borrow().deref()),
+            };
+
+            class_methods.insert(name.lexeme.clone(), Object::Function(Rc::new(function)));
+        }
+
         let class = Object::Class(Rc::new(LoxClass {
             name: name.lexeme.clone(),
+            methods: class_methods,
         }));
 
         self.environment.borrow().borrow_mut().assign(name, class)?;
