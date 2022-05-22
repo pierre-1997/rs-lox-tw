@@ -304,6 +304,21 @@ impl ExprVisitor<Object> for Interpreter {
             error_type: RuntimeErrorType::InvalidObjectProperty,
         })
     }
+
+    fn visit_set_expr(&mut self, object: &Expr, name: &Token, value: &Expr) -> Result<Object, LoxResult> {
+        let obj = self.evaluate(object)?;
+
+        if let Object::Instance(instance) = obj {
+            let val = self.evaluate(value)?;
+            instance.set(name, val.clone());
+            Ok(val)
+        } else {
+            Err(LoxResult::Runtime {
+                token: name.clone(),
+                error_type: RuntimeErrorType::InvalidObjectProperty,
+            })
+        }
+    }
 }
 
 impl StmtVisitor<()> for Interpreter {

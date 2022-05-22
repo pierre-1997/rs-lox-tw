@@ -11,6 +11,7 @@ pub fn generate_ast(output_dir: &str) -> std::io::Result<()> {
             "Call     : Box<Expr> callee, Token paren, Vec<Expr> arguments".to_string(),
             "Get      : Box<Expr> object, Token name".to_string(),
             "Logical  : Box<Expr> left, Token operator, Box<Expr> right".to_string(),
+            "Set      : Box<Expr> object, Token name, Box<Expr> value".to_string(),
             "Unary    : Token operator, Box<Expr> right".to_string(),
             "Grouping : Box<Expr> expression".to_string(),
             "Literal  : Option<Object> value".to_string(),

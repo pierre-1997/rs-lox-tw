@@ -196,6 +196,18 @@ impl<'a> ExprVisitor<()> for Resolver<'a> {
         self.resolve_expr(object)?;
         Ok(())
     }
+
+    fn visit_set_expr(
+        &mut self,
+        object: &Expr,
+        _name: &Token,
+        value: &Expr,
+    ) -> Result<(), LoxResult> {
+        self.resolve_expr(value)?;
+        self.resolve_expr(object)?;
+
+        Ok(())
+    }
 }
 
 impl<'a> Resolver<'a> {

@@ -10,3 +10,6 @@ class Bagel {}
 print Bagel;
 var bagel = Bagel();
 print bagel; // Prints "Bagel instance".
+
+bagel.value = 4;
+print bagel.value; // Prints "4"

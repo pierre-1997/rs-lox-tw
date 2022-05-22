@@ -458,13 +458,19 @@ impl<'a> Parser<'a> {
                     name,
                     value: Box::new(value),
                 });
+            } else if let Expr::Get { object, name } = expr {
+                return Ok(Expr::Set {
+                    object,
+                    name,
+                    value: Box::new(value),
+                });
+            } else {
+                return Err(LoxResult::Parser {
+                    token: equals,
+                    error_type: ParserErrorType::InvalidAssignTarget,
+                    msg: "".to_string(),
+                });
             }
-
-            return Err(LoxResult::Parser {
-                token: equals,
-                error_type: ParserErrorType::InvalidAssignTarget,
-                msg: "".to_string(),
-            });
         }
 
         Ok(expr)

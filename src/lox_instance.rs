@@ -1,6 +1,6 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
-
 use std::rc::Rc;
 
 use crate::errors::{LoxResult, RuntimeErrorType};
@@ -11,20 +11,20 @@ use crate::token::Token;
 #[derive(Debug)]
 pub struct LoxInstance {
     class: Rc<LoxClass>,
-    fields: HashMap<String, Object>,
+    fields: RefCell<HashMap<String, Object>>,
 }
 
 impl LoxInstance {
     pub fn new(class: &Rc<LoxClass>) -> Self {
         LoxInstance {
             class: Rc::clone(class),
-            fields: HashMap::new(),
+            fields: RefCell::new(HashMap::new()),
         }
     }
 
     pub fn get(&self, name: &Token) -> Result<Object, LoxResult> {
         // Check if the variable exists locally
-        if let Some(field) = self.fields.get(&name.lexeme) {
+        if let Some(field) = self.fields.borrow_mut().get(&name.lexeme) {
             return Ok(field.clone());
         }
 
@@ -32,6 +32,10 @@ impl LoxInstance {
             token: name.clone(),
             error_type: RuntimeErrorType::UndefinedProperty,
         })
+    }
+
+    pub fn set(&self, name: &Token, value: Object) {
+        self.fields.borrow_mut().insert(name.lexeme.clone(), value);
     }
 }
 
