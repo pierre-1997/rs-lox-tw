@@ -4,4 +4,9 @@ class DevonshireCream {
   }
 }
 
-print DevonshireCream; // Prints "DevonshireCream".
+print DevonshireCream; // Prints "<class DevonshireCream>"
+
+class Bagel {}
+print Bagel;
+var bagel = Bagel();
+print bagel; // Prints "Bagel instance".

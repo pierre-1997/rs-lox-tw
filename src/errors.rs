@@ -47,6 +47,7 @@ pub enum LoxResult {
         msg: String,
     },
     Runtime {
+        token: Token,
         error_type: RuntimeErrorType,
     },
     Scanner {
@@ -107,7 +108,7 @@ impl fmt::Display for LoxResult {
             },
 
             // Runtime error
-            LoxResult::Runtime { error_type } => match error_type {
+            LoxResult::Runtime { token, error_type } => match error_type {
                 RuntimeErrorType::UnreachableCode => {
                     writeln!(f, "This code is unreachable.")?;
                 }
@@ -115,9 +116,11 @@ impl fmt::Display for LoxResult {
                 RuntimeErrorType::ExpectedNumberOperands => {
                     write!(f, "Both operands must be a number.")?
                 }
-                RuntimeErrorType::InvalidCallObjectType => {
-                    write!(f, "Can only call functions and classes.")?
-                }
+                RuntimeErrorType::InvalidCallObjectType => write!(
+                    f,
+                    "{} -> Can only call functions and classes.",
+                    token.location()
+                )?,
                 RuntimeErrorType::ExpectedAddableOperands => {
                     write!(f, "Operands must be two numbers or two strings.")?
                 }

@@ -6,6 +6,7 @@ use crate::environment::Environment;
 use crate::errors::LoxResult;
 use crate::interpreter::Interpreter;
 use crate::lox_callable::LoxCallable;
+use crate::lox_class::LoxClass;
 use crate::object::Object;
 use crate::stmt::Stmt;
 use crate::token::Token;
@@ -29,6 +30,7 @@ impl LoxCallable for LoxFunction {
         &self,
         interpreter: &mut Interpreter,
         arguments: Vec<Object>,
+        class: Option<Rc<LoxClass>>,
     ) -> Result<Object, LoxResult> {
         let mut env = Environment::from_enclosing(Rc::clone(&self.closure));
 

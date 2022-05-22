@@ -39,12 +39,14 @@ impl ExprVisitor<Object> for Interpreter {
                     Ok(Object::Num(-x))
                 } else {
                     Err(LoxResult::Runtime {
+                        token: operator.clone(),
                         error_type: RuntimeErrorType::ExpectedNumberOperand,
                     })
                 }
             }
             TokenType::Bang => Ok(Object::from(!self.is_truthy(right))),
             _ => Err(LoxResult::Runtime {
+                token: operator.clone(),
                 error_type: RuntimeErrorType::UnreachableCode,
             }),
         }
@@ -90,6 +92,7 @@ impl ExprVisitor<Object> for Interpreter {
                 }
 
                 Err(LoxResult::Runtime {
+                    token: operator.clone(),
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -102,6 +105,7 @@ impl ExprVisitor<Object> for Interpreter {
                 }
 
                 Err(LoxResult::Runtime {
+                    token: operator.clone(),
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -115,6 +119,7 @@ impl ExprVisitor<Object> for Interpreter {
                 }
 
                 Err(LoxResult::Runtime {
+                    token: operator.clone(),
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -139,6 +144,7 @@ impl ExprVisitor<Object> for Interpreter {
 
                 // TODO: Specific error for when 2 different type (a string and a number)
                 Err(LoxResult::Runtime {
+                    token: operator.clone(),
                     error_type: RuntimeErrorType::ExpectedAddableOperands,
                 })
             }
@@ -153,6 +159,7 @@ impl ExprVisitor<Object> for Interpreter {
                 }
 
                 Err(LoxResult::Runtime {
+                    token: operator.clone(),
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -166,6 +173,7 @@ impl ExprVisitor<Object> for Interpreter {
                 }
 
                 Err(LoxResult::Runtime {
+                    token: operator.clone(),
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -179,6 +187,7 @@ impl ExprVisitor<Object> for Interpreter {
                 }
 
                 Err(LoxResult::Runtime {
+                    token: operator.clone(),
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -192,6 +201,7 @@ impl ExprVisitor<Object> for Interpreter {
                 }
 
                 Err(LoxResult::Runtime {
+                    token: operator.clone(),
                     error_type: RuntimeErrorType::ExpectedNumberOperands,
                 })
             }
@@ -203,6 +213,7 @@ impl ExprVisitor<Object> for Interpreter {
             TokenType::EqualEqual => Ok(Object::from(left == right)),
 
             _ => Err(LoxResult::Runtime {
+                token: operator.clone(),
                 error_type: RuntimeErrorType::UnreachableCode,
             }),
         }
@@ -234,7 +245,7 @@ impl ExprVisitor<Object> for Interpreter {
     fn visit_call_expr(
         &mut self,
         callee: &Expr,
-        _paren: &Token,
+        paren: &Token,
         arguments: &[Expr],
     ) -> Result<Object, LoxResult> {
         // Get the expression's callee
@@ -248,28 +259,37 @@ impl ExprVisitor<Object> for Interpreter {
         }
 
         // Try to interpret the callee as a callable object (e.g function or class)
-        let called_function: Rc<dyn LoxCallable> = match callee {
-            // Check for native function
-            Object::Native(native) => native.function.clone(),
-            // Check for defined function
-            Object::Function(function) => function,
-            // Otherwise, this is not a callable object type, return an error.
-            _ => {
-                return Err(LoxResult::Runtime {
-                    error_type: RuntimeErrorType::InvalidCallObjectType,
-                });
-            }
-        };
+        let (called_function, called_class): (Rc<dyn LoxCallable>, Option<Rc<LoxClass>>) =
+            match callee {
+                // Check for native function
+                Object::Native(native) => (native.function.clone(), None),
+                // Check for defined function
+                Object::Function(function) => (function, None),
+                // Check for define classes
+                //
+                Object::Class(class) => {
+                    let called_class = Rc::clone(&class);
+                    (class, Some(called_class))
+                }
+                // Otherwise, this is not a callable object type, return an error.
+                _ => {
+                    return Err(LoxResult::Runtime {
+                        token: paren.clone(),
+                        error_type: RuntimeErrorType::InvalidCallObjectType,
+                    });
+                }
+            };
 
         // Check called function's arity and return error if incorrect
         if arguments.len() != called_function.arity() {
             return Err(LoxResult::Runtime {
+                token: paren.clone(),
                 error_type: RuntimeErrorType::InvalidArgsCount,
             });
         }
 
         // Return the function's call result
-        called_function.call(self, call_args)
+        called_function.call(self, call_args, called_class)
     }
 }
 
