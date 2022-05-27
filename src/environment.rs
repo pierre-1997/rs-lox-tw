@@ -17,11 +17,15 @@ pub struct Environment {
 impl fmt::Display for Environment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (k, v) in &self.values {
-            writeln!(f, "{} = {};", k, v)?
+            writeln!(f, "{} = {}", k, v)?
         }
 
         if self.enclosing.is_some() {
-            writeln!(f, "Enclosing: true.")?
+            writeln!(
+                f,
+                "Enclosing: {}",
+                self.enclosing.as_ref().unwrap().borrow()
+            )?
         } else {
             writeln!(f, "Enclosing: false.")?
         }

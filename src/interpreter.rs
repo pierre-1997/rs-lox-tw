@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::{Deref, Index};
+use std::ops::Index;
 use std::rc::Rc;
 
 use crate::environment::Environment;
@@ -20,7 +20,7 @@ use crate::token_type::TokenType;
  * This is the interpreter object.
  */
 pub struct Interpreter {
-    environment: RefCell<Rc<RefCell<Environment>>>,
+    environment: Rc<RefCell<Environment>>,
     pub env_globals: Rc<RefCell<Environment>>,
     locals: HashMap<Token, usize>,
 }
@@ -58,11 +58,9 @@ impl ExprVisitor<Object> for Interpreter {
         let distance = self.locals.index(name);
 
         if distance > &0 {
-            self.environment.borrow().borrow_mut().assign_at(
-                *distance,
-                name.clone(),
-                value.clone(),
-            );
+            self.environment
+                .borrow_mut()
+                .assign_at(*distance, name.clone(), value.clone());
         } else {
             self.env_globals.borrow_mut().assign(name, value.clone())?;
         }
@@ -295,14 +293,15 @@ impl ExprVisitor<Object> for Interpreter {
     fn visit_get_expr(&mut self, object: &Expr, name: &Token) -> Result<Object, LoxResult> {
         let obj = self.evaluate(object)?;
 
-        if let Object::Instance(instance) = obj {
-            return instance.get(name);
+        if let Object::Instance(ref instance) = obj {
+            println!("Getting {} from {}", name.lexeme, instance.class.name);
+            instance.get(name, &obj)
+        } else {
+            Err(LoxResult::Runtime {
+                token: name.clone(),
+                error_type: RuntimeErrorType::InvalidObjectProperty,
+            })
         }
-
-        Err(LoxResult::Runtime {
-            token: name.clone(),
-            error_type: RuntimeErrorType::InvalidObjectProperty,
-        })
     }
 
     fn visit_set_expr(
@@ -323,6 +322,10 @@ impl ExprVisitor<Object> for Interpreter {
                 error_type: RuntimeErrorType::InvalidObjectProperty,
             })
         }
+    }
+
+    fn visit_this_expr(&mut self, keyword: &Token) -> Result<Object, LoxResult> {
+        self.look_up_variable(keyword)
     }
 }
 
@@ -354,7 +357,6 @@ impl StmtVisitor<()> for Interpreter {
         }
 
         self.environment
-            .borrow()
             .borrow_mut()
             .define(name.lexeme.clone(), value);
 
@@ -362,8 +364,8 @@ impl StmtVisitor<()> for Interpreter {
     }
 
     fn visit_block_stmt(&mut self, statements: &[Stmt]) -> Result<(), LoxResult> {
-        let env = Environment::from_enclosing(self.environment.borrow().clone());
-        self.execute_block(statements, env)
+        let env = Environment::from_enclosing(Rc::clone(&self.environment));
+        self.execute_block(statements, Rc::new(RefCell::new(env)))
     }
 
     fn visit_if_stmt(
@@ -426,42 +428,42 @@ impl StmtVisitor<()> for Interpreter {
             name: name.clone(),
             params: params.to_vec(),
             body: body.to_vec(),
-            closure: Rc::clone(self.environment.borrow().deref()),
+            closure: Rc::clone(&self.environment),
         }));
 
         // Define the function in the current environment
         self.environment
-            .borrow_mut()
             .borrow_mut()
             .define(name.lexeme.clone(), function);
 
         Ok(())
     }
 
+    /**
+     * Function called when interpretting a class declaration statement.
+     */
     fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<(), LoxResult> {
+        // Define the class in the environment as a null object for now
         self.environment
-            .borrow()
             .borrow_mut()
             .define(name.lexeme.clone(), Object::Nil);
 
-        let mut class_methods: HashMap<String, Object> = HashMap::new();
+        // Interpret each defined class method into a `LoxFunction` object
+        let mut class_methods: HashMap<String, LoxFunction> = HashMap::new();
         for method in methods {
-            let (name, body, params) = if let Stmt::Function { name, params, body } = method {
-                (name, body, params)
-            } else {
-                return Err(LoxResult::Runtime {
-                    token: name.clone(),
-                    error_type: RuntimeErrorType::Panic,
-                });
-            };
-            let function = LoxFunction {
-                name: name.clone(),
-                params: params.clone(),
-                body: body.clone(),
-                closure: Rc::clone(self.environment.borrow().deref()),
-            };
+            // Extract the name, body and param of the method
+            if let Stmt::Function { name, params, body } = method {
+                let function = LoxFunction {
+                    name: name.clone(),
+                    params: params.clone(),
+                    body: body.clone(),
+                    closure: Rc::clone(&self.environment),
+                };
 
-            class_methods.insert(name.lexeme.clone(), Object::Function(Rc::new(function)));
+                class_methods.insert(name.lexeme.clone(), function);
+            } else {
+                unreachable!()
+            };
         }
 
         let class = Object::Class(Rc::new(LoxClass {
@@ -469,7 +471,7 @@ impl StmtVisitor<()> for Interpreter {
             methods: class_methods,
         }));
 
-        self.environment.borrow().borrow_mut().assign(name, class)?;
+        self.environment.borrow_mut().assign(name, class)?;
 
         Ok(())
     }
@@ -487,7 +489,7 @@ impl Interpreter {
         );
 
         Interpreter {
-            environment: RefCell::new(Rc::clone(&globals)),
+            environment: Rc::clone(&globals),
             env_globals: Rc::clone(&globals),
             locals: HashMap::new(),
         }
@@ -513,19 +515,29 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    pub fn execute_block(&mut self, stmts: &[Stmt], env: Environment) -> Result<(), LoxResult> {
-        let prev_env = self.environment.replace(Rc::new(RefCell::new(env)));
+    pub fn execute_block(
+        &mut self,
+        stmts: &[Stmt],
+        env: Rc<RefCell<Environment>>,
+    ) -> Result<(), LoxResult> {
+        let prev_env = self.environment.clone();
 
-        let ret = stmts.iter().try_for_each(|stmt| self.execute(stmt));
+        let steps = || -> Result<(), LoxResult> {
+            self.environment = env;
+            for stmt in stmts {
+                self.execute(stmt)?
+            }
+            Ok(())
+        };
 
-        self.environment.replace(prev_env);
-
-        ret
+        let result = steps();
+        self.environment = prev_env;
+        result
     }
 
     pub fn look_up_variable(&self, name: &Token) -> Result<Object, LoxResult> {
         if let Some(distance) = self.locals.get(name) {
-            Ok(self.environment.borrow().borrow().get_at(*distance, name)?)
+            Ok(self.environment.borrow().get_at(*distance, name)?)
         } else {
             self.env_globals.borrow().get(name)
         }

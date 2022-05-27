@@ -108,8 +108,11 @@ impl<'a> Parser<'a> {
         Ok(None)
     }
 
+    /**
+     * Parses the next tokens into a `Stmt::Class` statement.
+     */
     fn class_declaration(&mut self) -> Result<Stmt, LoxResult> {
-        // Parse the function's name
+        // Parse the class's name
         let name = self.consume(TokenType::Identifier, "Expected class name.")?;
         // Parse the opening '{' starting the class body
         self.consume(
@@ -117,6 +120,8 @@ impl<'a> Parser<'a> {
             &format!("Expected opening '{{' before class '{name}' body."),
         )?;
 
+        // Parse methods until we find the closing '}' or we until we reach the end of the
+        // source code
         let mut methods = Vec::new();
         while !self.check(TokenType::RightBrace) && !self.is_at_end() {
             methods.push(self.function("method")?);
@@ -131,9 +136,13 @@ impl<'a> Parser<'a> {
             ),
         )?;
 
+        // Return the class statement
         Ok(Stmt::Class { name, methods })
     }
 
+    /**
+     * Parses the next tokens into a `ui`Stmt::Function` statement.
+     */
     fn function(&mut self, kind: &str) -> Result<Stmt, LoxResult> {
         // Parse the function's name
         let name = self.consume(TokenType::Identifier, &format!("Expected {} name.", kind))?;
@@ -208,10 +217,13 @@ impl<'a> Parser<'a> {
     }
 
     /**
-     * Parses the next tokens as a statement.
+     * This function is called when the next tokens are expected to contain a top level statement.
+     * It will redirect to the correct token-parsing-function based on the first parsed token ]
+     * (e.g. 'var' -> `self.var_declaration()`, 'if' -> `self.if_statement()`, ...)
+     *
      */
     fn statement(&mut self) -> Result<Stmt, LoxResult> {
-        // Check if the next token is the start of a for-statement\
+        // Check if the next token is the start of a for-statement
         if self.matchs_next(&[TokenType::For]) {
             return self.for_statement();
         }
@@ -246,6 +258,31 @@ impl<'a> Parser<'a> {
         self.expression_statement()
     }
 
+    /**
+     * Parses the next tokens into a for statement.
+     *
+     * Note: The for statement is basically transformed into a while loop here (which is a
+     * `Stmt::Block` statement).
+     *
+     * Written for loop:
+     * ```
+     * for (var i = 0; i < 10; i = i + 1) {
+     *   print i;
+     * }
+     * ```
+     *
+     * Executed while loop:
+     * ```
+     * {
+     *   var i = 0;
+     *   while (i < 10) {
+     *     print i;
+     *     i = i + 1;
+     *   }
+     * }
+     * ```
+     *
+     */
     fn for_statement(&mut self) -> Result<Stmt, LoxResult> {
         // The next token to come after 'for' must be an opening '('
         self.consume(
@@ -288,22 +325,6 @@ impl<'a> Parser<'a> {
             "Expected closing ')' after for statement.",
         )?;
 
-        /*
-         * We will now basically transform the for loop into a while loop here.
-         *
-         * Written for loop:
-         * for (var i = 0; i < 10; i = i + 1) print i;
-         *
-         * Executed while loop:
-         * {
-         * var i = 0;
-         * while (i < 10) {
-         *  print i;
-         *  i = i + 1;
-         * }
-        }
-        */
-
         // Parse the body statements of the for loop
         // e.g in the example above: "print i;"
         let mut body = self.statement()?;
@@ -323,7 +344,6 @@ impl<'a> Parser<'a> {
                 value: Some(Object::True),
             });
         }
-
         // Put the current body into a while expression with its condition
         body = Stmt::While {
             condition: condition.unwrap(),
@@ -338,24 +358,34 @@ impl<'a> Parser<'a> {
             };
         }
 
+        // Return the for statement as a `Stmt::Block`
         Ok(body)
     }
 
+    /**
+     * Parses an if statement into a `Stmt::If`.
+     */
     fn if_statement(&mut self) -> Result<Stmt, LoxResult> {
+        // The 'if' keyword is supposed to be followed by an opening '(' parenthesis
         self.consume(TokenType::LeftParen, "Expected '(' after 'if' statement.")?;
+        // Then, inside the parenthesis, there should be an expression
         let condition = self.expression()?;
+        // Parse the closing ')' parenthesis
         self.consume(
             TokenType::RightParen,
             "Missing closing ')' after if condition.",
         )?;
 
+        // Parse the code block that ought to be executed if the 'if' condition is truthy
         let then_branch = self.statement()?;
-        let mut else_branch = Box::new(None);
 
+        // Try to parse the next tokens into an optional else code block
+        let mut else_branch = Box::new(None);
         if self.matchs_next(&[TokenType::Else]) {
             else_branch = Box::new(Some(self.statement()?));
         }
 
+        // Return the built `Stmt::If` statement
         Ok(Stmt::If {
             condition,
             then_branch: Box::new(then_branch),
@@ -379,15 +409,18 @@ impl<'a> Parser<'a> {
      * Parses the next tokens as part of a return statement.
      */
     fn return_statement(&mut self) -> Result<Stmt, LoxResult> {
+        // Get the 'return' keyword
         let keyword = self.previous();
-        let mut value = None;
 
+        // Check if there is a value to return after the 'return' keyword
+        let mut value = None;
         if !self.check(TokenType::Semicolon) {
             value = Some(self.expression()?);
         }
-
+        // Consume the ending ';' semicolon
         self.consume(TokenType::Semicolon, "Expected ';' after return statement.")?;
 
+        // Return the built `Stmt::Return` statement
         Ok(Stmt::Return { keyword, value })
     }
 
@@ -395,34 +428,46 @@ impl<'a> Parser<'a> {
      * Parses the next tokens as part of a while statement.
      */
     fn while_statement(&mut self) -> Result<Stmt, LoxResult> {
+        // Consume the opening '(' parenthesis after the 'while' keyword
         self.consume(TokenType::LeftParen, "Expected '(' after while statement.")?;
+        // Get the condition of the while statement
         let condition = self.expression()?;
+        // Consume the closing ')' parenthesis after the condition of the while statement
         self.consume(
             TokenType::LeftParen,
             "Expected closing ')' after while statement.",
         )?;
+
+        // Get the while's body
         let body = self.statement()?;
 
+        // Return the built `Stmt::While` statement
         Ok(Stmt::While {
             condition,
             body: Box::new(body),
         })
     }
 
+    /**
+     * Parses the next tokens into a block statement (e.g. an array of statements).
+     */
     fn block_statement(&mut self) -> Result<Vec<Stmt>, LoxResult> {
+        // The array of statements that'll be parsed
         let mut stmts = Vec::new();
-
+        // Parse a statement until we reach a closing '}' brace or the end of the source code
         while !self.check(TokenType::RightBrace) && !self.is_at_end() {
             if let Some(s) = self.declaration()? {
                 stmts.push(s);
             }
         }
 
+        // Parse the closing '}' brace
         self.consume(
             TokenType::RightBrace,
             "Missing scope ending right brace '}'.",
         )?;
 
+        // Return the array of statements
         Ok(stmts)
     }
 
@@ -446,25 +491,36 @@ impl<'a> Parser<'a> {
         self.assignment()
     }
 
+    /**
+     * Parses the next token into an assignment statement.
+     */
     fn assignment(&mut self) -> Result<Expr, LoxResult> {
+        // Try getting an or statement or whatever the next precedence statement will be
         let expr = self.or()?;
 
+        // Check if we have an equal in the statement
         if self.matchs_next(&[TokenType::Equal]) {
+            // Get the value before the '=' sign
             let equals = self.previous();
+            // Get the value after the '=' sign
             let value = self.assignment()?;
-
+            // Check if we are in the case of 'var a = x;'
             if let Expr::Variable { name } = expr {
                 return Ok(Expr::Assign {
                     name,
                     value: Box::new(value),
                 });
-            } else if let Expr::Get { object, name } = expr {
+            }
+            // Check if we are in the case 'a = x;'
+            else if let Expr::Get { object, name } = expr {
                 return Ok(Expr::Set {
                     object,
                     name,
                     value: Box::new(value),
                 });
-            } else {
+            }
+            // Else, we're have an error because x is unknown
+            else {
                 return Err(LoxResult::Parser {
                     token: equals,
                     error_type: ParserErrorType::InvalidAssignTarget,
@@ -473,6 +529,7 @@ impl<'a> Parser<'a> {
             }
         }
 
+        // Return the parsed assignment
         Ok(expr)
     }
 
@@ -581,7 +638,11 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
+    /**
+     * Parses the next tokens into an 'or' expression, or whatever is next in the precedence order.
+     */
     fn or(&mut self) -> Result<Expr, LoxResult> {
+        // Try getting an 'and' expression, because it is the next in the precedence order.
         let mut expr = self.and()?;
 
         while self.matchs_next(&[TokenType::Or]) {
@@ -732,6 +793,13 @@ impl<'a> Parser<'a> {
         if self.matchs_next(&[TokenType::Number, TokenType::String]) {
             return Ok(Expr::Literal {
                 value: self.previous().literal,
+            });
+        }
+
+        // Parse 'this' keyword
+        if self.matchs_next(&[TokenType::This]) {
+            return Ok(Expr::This {
+                keyword: self.previous(),
             });
         }
 

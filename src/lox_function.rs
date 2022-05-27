@@ -14,9 +14,26 @@ use crate::token::Token;
 #[derive(Clone)]
 pub struct LoxFunction {
     pub name: Token,
+    // TODO: Refactor into Rc<Vec<Token>>
     pub params: Vec<Token>,
+    // TODO: Refactor into Rc<Vec<Stmt>>
     pub body: Vec<Stmt>,
     pub closure: Rc<RefCell<Environment>>,
+}
+
+impl LoxFunction {
+    pub fn bind(&self, instance: Object) -> LoxFunction {
+        let mut new_env = Environment::from_enclosing(Rc::clone(&self.closure));
+
+        new_env.define("this".to_string(), instance);
+
+        Self {
+            name: self.name.clone(),
+            params: self.params.clone(),
+            body: self.body.clone(),
+            closure: Rc::new(RefCell::new(new_env)),
+        }
+    }
 }
 
 impl fmt::Debug for LoxFunction {
@@ -34,18 +51,16 @@ impl LoxCallable for LoxFunction {
     ) -> Result<Object, LoxResult> {
         let mut env = Environment::from_enclosing(Rc::clone(&self.closure));
 
-        for i in 0..self.params.len() {
-            env.define(
-                self.params.get(i).unwrap().lexeme.clone(),
-                arguments.get(i).unwrap().clone(),
-            );
+        for (param, arg) in self.params.iter().zip(arguments.iter()) {
+            env.define(param.lexeme.clone(), arg.clone());
         }
 
-        if let Err(LoxResult::ReturnValue { value }) = interpreter.execute_block(&self.body, env) {
-            return Ok(value);
+        // Handle the execution's return
+        match interpreter.execute_block(&self.body, Rc::new(RefCell::new(env))) {
+            Err(LoxResult::ReturnValue { value }) => Ok(value),
+            Err(e) => Err(e),
+            Ok(_) => Ok(Object::Nil),
         }
-
-        Ok(Object::Nil)
     }
 
     fn arity(&self) -> usize {

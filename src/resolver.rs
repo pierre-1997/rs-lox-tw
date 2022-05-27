@@ -110,6 +110,13 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
         self.declare(name)?;
         self.define(name);
 
+        self.begin_scope();
+        self.scopes
+            .borrow_mut()
+            .last_mut()
+            .unwrap()
+            .insert("this".to_string(), true);
+
         for method in methods {
             let (_name, body, params) = if let Stmt::Function { name, params, body } = method {
                 (name, body, params)
@@ -122,6 +129,8 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
 
             self.resolve_function(params, body, FunctionType::Method)?;
         }
+
+        self.end_scope();
 
         Ok(())
     }
@@ -187,13 +196,7 @@ impl<'a> ExprVisitor<()> for Resolver<'a> {
 
     fn visit_variable_expr(&mut self, name: &Token) -> Result<(), LoxResult> {
         if !self.scopes.borrow().is_empty()
-            && self
-                .scopes
-                .borrow()
-                .last()
-                .unwrap()
-                .get(&name.lexeme)
-                .is_some()
+            && self.scopes.borrow().last().unwrap().get(&name.lexeme) == Some(&false)
         {
             return Err(LoxResult::Resolver {
                 token: name.clone(),
@@ -220,6 +223,11 @@ impl<'a> ExprVisitor<()> for Resolver<'a> {
         self.resolve_expr(value)?;
         self.resolve_expr(object)?;
 
+        Ok(())
+    }
+
+    fn visit_this_expr(&mut self, keyword: &Token) -> Result<(), LoxResult> {
+        self.resolve_local(keyword);
         Ok(())
     }
 }

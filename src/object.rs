@@ -63,13 +63,13 @@ impl From<&str> for Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Num(x) => write!(f, "{}", x),
-            Self::Str(s) => write!(f, "\"{}\"", s),
+            Self::Num(x) => write!(f, "{x}"),
+            Self::Str(s) => write!(f, "\"{s}\""),
             Self::Nil => write!(f, "nil"),
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
-            Self::Function(fun) => write!(f, "{}", fun),
-            Self::Native(fun) => write!(f, "{}", fun),
+            Self::Function(fun) => write!(f, "{fun}"),
+            Self::Native(fun) => write!(f, "{fun}"),
             Self::Class(class) => write!(f, "{class}"),
             Self::Instance(instance) => write!(f, "{instance}"),
         }
