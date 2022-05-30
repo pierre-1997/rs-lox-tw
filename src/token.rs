@@ -21,7 +21,6 @@ impl Hash for Token {
     }
 }
 
-// TODO: Should we compare token position too ?
 impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
         self.ttype == other.ttype && self.lexeme == other.lexeme && self.literal == other.literal

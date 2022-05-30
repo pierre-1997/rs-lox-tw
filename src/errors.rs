@@ -3,7 +3,7 @@ use std::fmt;
 use crate::object::Object;
 use crate::token::Token;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RuntimeErrorType {
     UnreachableCode,
     ExpectedNumberOperand,
@@ -15,13 +15,13 @@ pub enum RuntimeErrorType {
     UndefinedProperty,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ScannerErrorType {
     InvalidCharacter,
     UnterminatedString,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParserErrorType {
     ExpectedExpression,
     InvalidConsumeType,
@@ -29,19 +29,19 @@ pub enum ParserErrorType {
     MaxArgNumber,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ResolverErrorType {
     VariableNotInitialized,
     VariableAlreadyExists,
     TopLevelReturn,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum EnvironmentErrorType {
     UnknownVariable,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum LoxResult {
     Parser {
         token: Token,

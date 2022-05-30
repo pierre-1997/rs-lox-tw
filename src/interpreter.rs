@@ -29,6 +29,106 @@ pub struct Interpreter {
     locals: HashMap<Token, usize>,
 }
 
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Interpreter {
+    /**
+     * Note: This is where `Object::Native` functions are defined in `self.env_globals`.
+     */
+    pub fn new() -> Self {
+        // Instanciate a new empty environment
+        let globals = Rc::new(RefCell::new(Environment::new()));
+
+        // Define the `clock()` function as a native one.
+        globals.borrow_mut().define(
+            "clock".to_string(),
+            Object::Native(Rc::new(NativeFunction {
+                function: Rc::new(NativeClock {}),
+            })),
+        );
+
+        // Return a new Interpreter instance
+        // NOTE: Shouldn't the global env be enclosed in the env ?
+        Interpreter {
+            environment: Rc::clone(&globals),
+            env_globals: Rc::clone(&globals),
+            locals: HashMap::new(),
+        }
+    }
+
+    pub fn evaluate(&mut self, expr: &Expr) -> Result<Object, LoxResult> {
+        expr.accept(self)
+    }
+
+    pub fn is_truthy(&self, obj: Object) -> bool {
+        !(obj == Object::Nil || obj == Object::False)
+    }
+
+    pub fn interpret(&mut self, statements: &[Stmt]) -> Result<(), LoxResult> {
+        for statement in statements {
+            self.execute(statement)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn execute(&mut self, stmt: &Stmt) -> Result<(), LoxResult> {
+        stmt.accept(self)
+    }
+
+    pub fn execute_block(
+        &mut self,
+        stmts: &[Stmt],
+        env: Rc<RefCell<Environment>>,
+    ) -> Result<(), LoxResult> {
+        let prev_env = self.environment.clone();
+
+        let steps = || -> Result<(), LoxResult> {
+            self.environment = env;
+            for stmt in stmts {
+                self.execute(stmt)?
+            }
+            Ok(())
+        };
+
+        let result = steps();
+        self.environment = prev_env;
+        result
+    }
+
+    pub fn look_up_variable(&self, name: &Token) -> Result<Object, LoxResult> {
+        // TODO: Sort out this `self.locals` mess. There must be something strange about it.
+        // Try to get it from the environment
+        if let Ok(obj) = self.environment.borrow().get(name) {
+            return Ok(obj);
+        }
+        // Try to get it from locals
+        if let Some(distance) = self.locals.get(name) {
+            Ok(self.environment.borrow().get_at(*distance, name)?)
+        }
+        // Try to get it from globals
+        else {
+            self.env_globals.borrow().get(name)
+        }
+    }
+
+    /**
+     * Tells the interpreter that there is the variable `name` that is defined at
+     * a the specific `depth`.
+     */
+    pub fn resolve(&mut self, name: &Token, depth: usize) {
+        // Insert the entry (name, depth) in the `self.locals` hashmap
+        self.locals.insert(name.clone(), depth);
+    }
+}
+
+/**
+ * Implementation of the expression visitor pattern for the `Interpreter`.
+ */
 impl ExprVisitor<Object> for Interpreter {
     /**
      * A literal expression is a value: f64, true, false, nil.
@@ -425,7 +525,7 @@ impl ExprVisitor<Object> for Interpreter {
 }
 
 /**
- * Implementation of the Visitor pattern of statements for the `Interpreter`.
+ * Implementation of the statement visitor pattern for the `Interpreter`.
  */
 impl StmtVisitor<()> for Interpreter {
     /**
@@ -535,19 +635,19 @@ impl StmtVisitor<()> for Interpreter {
     /**
      * Exectute a while statement containing a condition and a body.
      * Note: we have to transform the given `while {}`
-     * ```
+     * `
      * while <condition> {
      *     <body>
      * }
-     * ```
+     * `
      *
      * into a Rust's `loop {}`
-     * ```
+     * `
      * loop {
      *    if !<condition> { break; }
      *    <body>
      * }
-     * ```
+     * `
      * here.
      */
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<(), LoxResult> {
@@ -630,91 +730,5 @@ impl StmtVisitor<()> for Interpreter {
         self.environment.borrow_mut().assign(name, class)?;
 
         Ok(())
-    }
-}
-
-impl Interpreter {
-    /**
-     * Note: This is where `Object::Native` functions are defined in `self.env_globals`.
-     */
-    pub fn new() -> Self {
-        // Instanciate a new empty environment
-        let globals = Rc::new(RefCell::new(Environment::new()));
-
-        // Define the `clock()` function as a native one.
-        globals.borrow_mut().define(
-            "clock".to_string(),
-            Object::Native(Rc::new(NativeFunction {
-                function: Rc::new(NativeClock {}),
-            })),
-        );
-
-        // Return a new Interpreter instance
-        // NOTE: Shouldn't the global env be enclosed in the env ?
-        Interpreter {
-            environment: Rc::clone(&globals),
-            env_globals: Rc::clone(&globals),
-            locals: HashMap::new(),
-        }
-    }
-
-    pub fn evaluate(&mut self, expr: &Expr) -> Result<Object, LoxResult> {
-        expr.accept(self)
-    }
-
-    pub fn is_truthy(&self, obj: Object) -> bool {
-        !(obj == Object::Nil || obj == Object::False)
-    }
-
-    pub fn interpret(&mut self, statements: &[Stmt]) -> Result<(), LoxResult> {
-        for statement in statements {
-            self.execute(statement)?;
-        }
-
-        Ok(())
-    }
-
-    pub fn execute(&mut self, stmt: &Stmt) -> Result<(), LoxResult> {
-        stmt.accept(self)
-    }
-
-    pub fn execute_block(
-        &mut self,
-        stmts: &[Stmt],
-        env: Rc<RefCell<Environment>>,
-    ) -> Result<(), LoxResult> {
-        let prev_env = self.environment.clone();
-
-        let steps = || -> Result<(), LoxResult> {
-            self.environment = env;
-            for stmt in stmts {
-                self.execute(stmt)?
-            }
-            Ok(())
-        };
-
-        let result = steps();
-        self.environment = prev_env;
-        result
-    }
-
-    pub fn look_up_variable(&self, name: &Token) -> Result<Object, LoxResult> {
-        // TODO: Sort out this `self.locals` mess. There must be something strange about it.
-        // Try to get it from the environment
-        if let Ok(obj) = self.environment.borrow().get(name) {
-            return Ok(obj);
-        }
-        // Try to get it from locals
-        if let Some(distance) = self.locals.get(name) {
-            Ok(self.environment.borrow().get_at(*distance, name)?)
-        }
-        // Try to get it from globals
-        else {
-            self.env_globals.borrow().get(name)
-        }
-    }
-
-    pub fn resolve(&mut self, name: &Token, depth: usize) {
-        self.locals.insert(name.clone(), depth);
     }
 }

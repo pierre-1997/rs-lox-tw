@@ -15,9 +15,12 @@ enum FunctionType {
     Method,
 }
 
-pub struct Resolver<'a> {
-    interpreter: &'a mut Interpreter,
+pub struct Resolver<'i> {
+    /// The resolver will use an interpreter instance in order to check that the code is correct.
+    interpreter: &'i mut Interpreter,
+    /// This is a stack that will contain declared/defined names.
     scopes: RefCell<Vec<HashMap<String, bool>>>,
+    /// The type of the current function.
     current_function: FunctionType,
 }
 

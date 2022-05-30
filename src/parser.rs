@@ -261,18 +261,18 @@ impl<'a> Parser<'a> {
     /**
      * Parses the next tokens into a for statement.
      *
-     * Note: The for statement is basically transformed into a while loop here (which is a
-     * `Stmt::Block` statement).
+     * Note: The for statement is basically transformed into a while loop here (which is
+     * a `Stmt::Block` statement).
      *
      * Written for loop:
-     * ```
+     * `
      * for (var i = 0; i < 10; i = i + 1) {
      *   print i;
      * }
-     * ```
+     * `
      *
      * Executed while loop:
-     * ```
+     * `
      * {
      *   var i = 0;
      *   while (i < 10) {
@@ -280,7 +280,7 @@ impl<'a> Parser<'a> {
      *     i = i + 1;
      *   }
      * }
-     * ```
+     * `
      *
      */
     fn for_statement(&mut self) -> Result<Stmt, LoxResult> {

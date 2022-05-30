@@ -1,38 +1,9 @@
 // mod ast_printer;
 // use ast_printer::AstPrinter;
-
-mod environment;
-
-mod errors;
-
-mod expr;
-mod stmt;
-
-mod interpreter;
-use interpreter::Interpreter;
-
-mod lox_callable;
-mod lox_class;
-mod lox_function;
-mod lox_instance;
-mod lox_native;
-
-mod native_functions;
-
-mod object;
-
-mod parser;
-use parser::Parser;
-
-mod resolver;
-use resolver::Resolver;
-
-mod scanner;
-
-use scanner::*;
-
-mod token;
-mod token_type;
+use rs_lox_tw::interpreter::Interpreter;
+use rs_lox_tw::parser::Parser;
+use rs_lox_tw::resolver::Resolver;
+use rs_lox_tw::scanner::Scanner;
 
 use std::io::{self, Write};
 use std::{env, fs};
@@ -52,7 +23,7 @@ fn main() {
 
 pub fn run_file(path: &str) {
     let file_content = fs::read_to_string(path).expect("Unable to read file.");
-    run(file_content);
+    run(&file_content);
 }
 
 pub fn run_prompt() -> io::Result<()> {
@@ -65,11 +36,11 @@ pub fn run_prompt() -> io::Result<()> {
         if buf.is_empty() {
             continue;
         }
-        run(buf);
+        run(&buf);
     }
 }
 
-pub fn run(source: String) {
+pub fn run(source: &str) {
     let mut scanner = Scanner::new(source);
     // let printer = AstPrinter;
     let mut interpreter = Interpreter::new();

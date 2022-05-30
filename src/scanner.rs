@@ -47,9 +47,9 @@ impl Scanner {
     /**
      * Instanciates a new `Scanner` from raw source code as a String.
      */
-    pub fn new(source: String) -> Scanner {
+    pub fn new(source: &str) -> Scanner {
         Scanner {
-            source,
+            source: source.to_owned(),
             tokens: Vec::new(),
             start: 0,
             current: 0,
