@@ -1,0 +1,6 @@
+var a = "before";
+a = "value";
+print a; // "value"
+
+var a = 1;
+print a = 2; // "2".

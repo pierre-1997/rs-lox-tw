@@ -1,12 +1,12 @@
+{
+  var a = "first";
+  print a; // "first".
+}
 
-// Comment on first line
-
-var a = 3.0;
-var b = 5;
-
-// if a * b == 15.0 and false == false {
-  // var variable = 0.0;
-// }
+{
+  var a = "second";
+  print a; // "second".
+}
 
 var a = "global a";    // a = "global a"
 var b = "global b";    // b = "global b"
@@ -33,4 +33,23 @@ if (1 == 1) if (2 == 2) print "true"; else print "false";
 
 print "hi" or 2; // "hi".
 print nil or "yes"; // "yes".
+
+var global = "outside";
+{
+  var local = "inside";
+  print global + local; // "outsideinside"
+}
+
+// How loud?
+var volume = 11;
+// Silence.
+volume = 0;
+// Calculate size of 3x4x5 cuboid.
+{
+  var volume = 3 * 4 * 5;
+  print volume; // 60
+}
+
+
+
 
