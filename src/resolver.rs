@@ -106,30 +106,40 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
         Ok(())
     }
 
+    /**
+     * Function used to resolve class methods.
+     */
     fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<(), LoxResult> {
+        // Declare and define the class name
         self.declare(name)?;
         self.define(name);
 
+        // Start the class scope
         self.begin_scope();
+        // Insert the 'this' keyword as it should always be defined
         self.scopes
             .borrow_mut()
             .last_mut()
             .unwrap()
             .insert("this".to_string(), true);
 
+        // For each method of the class, resolve it
         for method in methods {
-            let (_name, body, params) = if let Stmt::Function { name, params, body } = method {
-                (name, body, params)
+            // Each statement in the 'methods' argument should be of the underlying
+            // variant `Stmt::Function`.
+            if let Stmt::Function {
+                name: _,
+                params,
+                body,
+            } = method
+            {
+                self.resolve_function(params, body, FunctionType::Method)?;
             } else {
-                return Err(LoxResult::Resolver {
-                    token: name.clone(),
-                    error_type: ResolverErrorType::Panic,
-                });
+                unreachable!()
             };
-
-            self.resolve_function(params, body, FunctionType::Method)?;
         }
 
+        // End the class scope
         self.end_scope();
 
         Ok(())
@@ -241,10 +251,18 @@ impl<'a> Resolver<'a> {
         }
     }
 
+    /**
+     * Function called when entering a new scope. It simply appends a new HashMap into the
+     * `self.scopes` property of the `Resolver`.
+     */
     fn begin_scope(&self) {
         self.scopes.borrow_mut().push(HashMap::new());
     }
 
+    /**
+     * Function called when leaving a scope. It simply pops the lastly appended scope from the
+     * `self.scopes` property of the `Resolver`.
+     */
     fn end_scope(&self) {
         self.scopes.borrow_mut().pop();
     }
@@ -304,6 +322,9 @@ impl<'a> Resolver<'a> {
         expr.accept(self)
     }
 
+    /**
+     * Calls the interpreter's resolve function once the object is found.
+     */
     fn resolve_local(&mut self, name: &Token) {
         for i in self.scopes.borrow().len()..0 {
             if self.scopes.borrow()[i].contains_key(&name.lexeme) {
@@ -314,24 +335,37 @@ impl<'a> Resolver<'a> {
         }
     }
 
+    /**
+     * Function called to declare and define a new function to the resolver.
+     *
+     * Note: It modifies and sets back the function type that is currently being resolved.
+     */
     fn resolve_function(
         &mut self,
         params: &[Token],
         body: &[Stmt],
         function_type: FunctionType,
     ) -> Result<(), LoxResult> {
+        // Store the surrounding function type
         let ftype = self.current_function;
+        // Set the current function type to the one we're currently declaring
         self.current_function = function_type;
+
+        // Start a new scope
         self.begin_scope();
 
+        // Declare and define each parameter of the function into the current scope
         for param in params {
             self.declare(param)?;
             self.define(param);
         }
-
+        // Resolve the list of statements that compose the body of the function
         self.resolve_stmts(body)?;
 
+        // End the function's scope
         self.end_scope();
+
+        // Set back the current function type being resolve to that we were before on
         self.current_function = ftype;
 
         Ok(())

@@ -15,23 +15,35 @@ use crate::token::Token;
 pub struct LoxFunction {
     pub name: Token,
     // TODO: Refactor into Rc<Vec<Token>>
+    /// Contains the list of parameters/arguments of the function.
     pub params: Vec<Token>,
     // TODO: Refactor into Rc<Vec<Stmt>>
+    /// Contains the list of statements that compose the function's body.
     pub body: Vec<Stmt>,
+    /// Environment used by the function itself. When defined, takes the values from the
+    /// surrounding environment.
     pub closure: Rc<RefCell<Environment>>,
 }
 
 impl LoxFunction {
-    pub fn bind(&self, instance: Object) -> LoxFunction {
-        let mut new_env = Environment::from_enclosing(Rc::clone(&self.closure));
+    /**
+     * Binds the function to a runtime object instance (e.g. a class)
+     */
+    pub fn bind(&self, instance: &Object) -> LoxFunction {
+        // Create a new environment that contains the current function's one
+        let new_env = RefCell::new(Environment::from_enclosing(Rc::clone(&self.closure)));
 
-        new_env.define("this".to_string(), instance);
+        // Define `this` in that new environment
+        new_env
+            .borrow_mut()
+            .define("this".to_string(), instance.clone());
 
+        // Return a new `LoxFunction` that just have this environment changed
         Self {
             name: self.name.clone(),
             params: self.params.clone(),
             body: self.body.clone(),
-            closure: Rc::new(RefCell::new(new_env)),
+            closure: Rc::new(new_env),
         }
     }
 }

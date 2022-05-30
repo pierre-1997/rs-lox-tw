@@ -68,7 +68,7 @@ impl Environment {
             return Ok(v.clone());
         }
 
-        // If we have an enclosing environment, check inside too
+        // If we have an enclosing environment, check inside too (recursive)
         if let Some(enclosing) = &self.enclosing {
             return enclosing.borrow().get(token);
         }

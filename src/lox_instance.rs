@@ -35,20 +35,19 @@ impl LoxInstance {
 
     /**
      * This function is used to retrieve any field associated with this instance. It is used when
-     * calling `instance.X`, with 'X' being the field/method we want to retrieve from this class
-     * instance.
+     * calling `instance.X`, with 'X' being the property/field/method we want to retrieve from
+     * this class instance.
      *
      * Note: This function needs to specially handle the `this` keyword.
      */
     pub fn get(&self, name: &Token, this: &Object) -> Result<Object, LoxResult> {
-        println!("Getting {} from {:?}", name.lexeme, self.fields);
         // Look for a field with that name
         if let Some(field) = self.fields.borrow_mut().get(&name.lexeme) {
             Ok(field.clone())
         }
         // Look for a method with that name
         else if let Some(method) = self.class.find_method(&name.lexeme) {
-            Ok(Object::Function(Rc::new(method.bind(this.clone()))))
+            Ok(Object::Function(Rc::new(method.bind(this))))
         } else {
             Err(LoxResult::Runtime {
                 token: name.clone(),
@@ -57,6 +56,10 @@ impl LoxInstance {
         }
     }
 
+    /**
+     * Function that sets an instance's field on the fly. This field can be any type of object
+     * (e.g. can also be a function).
+     */
     pub fn set(&self, name: &Token, value: Object) {
         self.fields.borrow_mut().insert(name.lexeme.clone(), value);
     }
