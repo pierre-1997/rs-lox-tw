@@ -13,6 +13,7 @@ pub enum RuntimeErrorType {
     InvalidArgsCount,
     InvalidObjectProperty,
     UndefinedProperty,
+    SuperclassNotClass,
 }
 
 #[derive(Debug, PartialEq)]
@@ -36,6 +37,7 @@ pub enum ResolverErrorType {
     TopLevelReturn,
     ThisOutsideClass,
     ReturnFromInit,
+    ClassInheritItself,
 }
 
 #[derive(Debug, PartialEq)]
@@ -158,6 +160,11 @@ impl fmt::Display for LoxResult {
                     token.location(),
                     token.lexeme
                 )?,
+                RuntimeErrorType::SuperclassNotClass => write!(
+                    f,
+                    "[runtime] {} -> Superclass must be a class.",
+                    token.location()
+                )?,
             },
 
             // Environment errors
@@ -195,6 +202,11 @@ impl fmt::Display for LoxResult {
                     f,
                     "[resolver] {} -> Cannot return a value from the init() function.",
                     token.location(),
+                )?,
+                ResolverErrorType::ClassInheritItself => write!(
+                    f,
+                    "[resolver] {} -> A class cannot inherit from itself.",
+                    token.location()
                 )?,
             },
         }

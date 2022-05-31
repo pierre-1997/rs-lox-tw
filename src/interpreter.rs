@@ -693,7 +693,26 @@ impl StmtVisitor<()> for Interpreter {
     /**
      * Function called when interpretting a class declaration statement.
      */
-    fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<(), LoxResult> {
+    fn visit_class_stmt(
+        &mut self,
+        name: &Token,
+        superclass: &Option<Expr>,
+        methods: &[Stmt],
+    ) -> Result<(), LoxResult> {
+        let superclass_obj: Option<Rc<LoxClass>> = match superclass {
+            Some(superclass) => {
+                if let Object::Class(ref sc) = self.evaluate(superclass)? {
+                    Some(Rc::clone(sc))
+                } else {
+                    return Err(LoxResult::Runtime {
+                        token: name.to_owned(),
+                        error_type: RuntimeErrorType::SuperclassNotClass,
+                    });
+                }
+            }
+            None => None,
+        };
+
         // Define the class in the environment as a null object for now
         self.environment
             .borrow_mut()
@@ -723,6 +742,7 @@ impl StmtVisitor<()> for Interpreter {
         let class = Object::Class(Rc::new(LoxClass {
             name: name.lexeme.clone(),
             methods: class_methods,
+            superclass: superclass_obj,
         }));
 
         // Set the previously declared object in the environment as the newly created class object.

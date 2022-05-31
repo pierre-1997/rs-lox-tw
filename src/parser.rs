@@ -114,6 +114,18 @@ impl<'a> Parser<'a> {
     fn class_declaration(&mut self) -> Result<Stmt, LoxResult> {
         // Parse the class's name
         let name = self.consume(TokenType::Identifier, "Expected class name.")?;
+
+        // Check if there is a superclass and if so parse it into a `Expr::Variable`
+        let superclass = match self.matchs_next(&[TokenType::Less]) {
+            true => {
+                self.consume(TokenType::Identifier, "Expected superclass name after '<'.")?;
+                Some(Expr::Variable {
+                    name: self.previous(),
+                })
+            }
+            false => None,
+        };
+
         // Parse the opening '{' starting the class body
         self.consume(
             TokenType::LeftBrace,
@@ -137,7 +149,11 @@ impl<'a> Parser<'a> {
         )?;
 
         // Return the class statement
-        Ok(Stmt::Class { name, methods })
+        Ok(Stmt::Class {
+            name,
+            superclass,
+            methods,
+        })
     }
 
     /**

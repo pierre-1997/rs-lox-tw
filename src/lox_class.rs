@@ -19,6 +19,8 @@ pub struct LoxClass {
     pub name: String,
     /// A map of defined functions for this class.
     pub methods: HashMap<String, LoxFunction>,
+    /// Optional superclass
+    pub superclass: Option<Rc<LoxClass>>,
 }
 
 impl LoxClass {
@@ -28,10 +30,17 @@ impl LoxClass {
      * Note: Returns `None` if not found.
      */
     pub fn find_method(&self, name: &str) -> Option<LoxFunction> {
+        // Try getting the method from the current class
         if let Some(method) = self.methods.get(name) {
             return Some(method.clone());
         }
 
+        // Try getting the method from the superclass if there is any
+        if let Some(sc) = &self.superclass {
+            return sc.find_method(name);
+        }
+
+        // Return None because the method was not found
         None
     }
 }

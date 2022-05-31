@@ -127,13 +127,34 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
     /**
      * Function used to resolve class methods.
      */
-    fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<(), LoxResult> {
+    fn visit_class_stmt(
+        &mut self,
+        name: &Token,
+        superclass: &Option<Expr>,
+        methods: &[Stmt],
+    ) -> Result<(), LoxResult> {
         // Change `self.current_class` because we are now in a class
         let enclosing_class = self.current_class;
         self.current_class = ClassType::Class;
         // Declare and define the class name
         self.declare(name)?;
         self.define(name);
+
+        // If the current class has a superclass, resolve it
+        if let Some(superclass) = superclass {
+            // Check for a self inherited class
+            if let Expr::Variable { name: super_name } = superclass {
+                if super_name == name {
+                    return Err(LoxResult::Resolver {
+                        token: name.to_owned(),
+                        error_type: ResolverErrorType::ClassInheritItself,
+                    });
+                }
+            } else {
+                unreachable!()
+            }
+            self.resolve_expr(superclass)?;
+        }
 
         // Start the class scope
         self.begin_scope();
