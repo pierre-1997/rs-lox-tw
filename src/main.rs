@@ -33,7 +33,12 @@ impl Lox {
         for line in stdin.lock().lines() {
             // Specialy convert an IO error into a `LoxResult::IOError`
             match line {
-                Ok(line) => self.run(line)?,
+                Ok(line) => {
+                    // If error running the code, print it and continue
+                    if let Err(e) = self.run(line) {
+                        eprintln!("{e}");
+                    }
+                }
                 Err(_) => return Err(LoxResult::IOError),
             };
             // Print the prompt

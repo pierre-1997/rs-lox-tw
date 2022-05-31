@@ -13,4 +13,9 @@ add(1);
 }
 print a; // Error! No more "a".
 
+// Invalid use of this
+print this;
+fun notAMethod() {
+  print this;
+}
 

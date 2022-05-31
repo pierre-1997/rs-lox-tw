@@ -42,3 +42,36 @@ fn test_error_variable_already_exists() {
         }
     }
 }
+
+#[test]
+fn test_invalid_this_top_level() {
+    let source = "print this;";
+
+    let (mut scanner, mut interpreter) = common::scanner_and_interpreter(source);
+    let mut resolver = Resolver::new(&mut interpreter);
+    if let Ok(tokens) = scanner.scan_tokens() {
+        let mut parser = Parser::new(tokens);
+
+        match parser.parse() {
+            Ok(stmts) => {
+                assert_eq!(
+                    resolver.resolve_stmts(&stmts),
+                    Err(LoxResult::Resolver {
+                        token: Token {
+                            src_end: 0,
+                            ttype: TokenType::This,
+                            src_line: 0,
+                            src_start: 0,
+                            lexeme: "this".to_string(),
+                            literal: None
+                        },
+                        error_type: ResolverErrorType::ThisOutsideClass
+                    })
+                )
+            }
+            Err(e) => {
+                eprintln!("There was an error: {}", e)
+            }
+        }
+    }
+}

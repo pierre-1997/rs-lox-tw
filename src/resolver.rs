@@ -15,6 +15,12 @@ enum FunctionType {
     Method,
 }
 
+#[derive(PartialEq, Clone, Copy)]
+enum ClassType {
+    None,
+    Class,
+}
+
 pub struct Resolver<'i> {
     /// The resolver will use an interpreter instance in order to check that the code is correct.
     interpreter: &'i mut Interpreter,
@@ -22,6 +28,8 @@ pub struct Resolver<'i> {
     scopes: RefCell<Vec<HashMap<String, bool>>>,
     /// The type of the current function.
     current_function: FunctionType,
+    /// The type of the current class.
+    current_class: ClassType,
 }
 
 impl<'a> StmtVisitor<()> for Resolver<'a> {
@@ -113,6 +121,9 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
      * Function used to resolve class methods.
      */
     fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<(), LoxResult> {
+        // Change `self.current_class` because we are now in a class
+        let enclosing_class = self.current_class;
+        self.current_class = ClassType::Class;
         // Declare and define the class name
         self.declare(name)?;
         self.define(name);
@@ -144,6 +155,8 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
 
         // End the class scope
         self.end_scope();
+        // Reset `self.current_class`
+        self.current_class = enclosing_class;
 
         Ok(())
     }
@@ -240,6 +253,12 @@ impl<'a> ExprVisitor<()> for Resolver<'a> {
     }
 
     fn visit_this_expr(&mut self, keyword: &Token) -> Result<(), LoxResult> {
+        if self.current_class == ClassType::None {
+            return Err(LoxResult::Resolver {
+                token: keyword.clone(),
+                error_type: ResolverErrorType::ThisOutsideClass,
+            });
+        }
         self.resolve_local(keyword);
         Ok(())
     }
@@ -251,6 +270,7 @@ impl<'a> Resolver<'a> {
             interpreter,
             scopes: RefCell::new(Vec::new()),
             current_function: FunctionType::Void,
+            current_class: ClassType::None,
         }
     }
 
