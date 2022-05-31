@@ -141,7 +141,7 @@ impl<'a> Parser<'a> {
     }
 
     /**
-     * Parses the next tokens into a `ui`Stmt::Function` statement.
+     * Parses the next tokens into a `Stmt::Function` statement.
      */
     fn function(&mut self, kind: &str) -> Result<Stmt, LoxResult> {
         // Parse the function's name
@@ -429,13 +429,13 @@ impl<'a> Parser<'a> {
      */
     fn while_statement(&mut self) -> Result<Stmt, LoxResult> {
         // Consume the opening '(' parenthesis after the 'while' keyword
-        self.consume(TokenType::LeftParen, "Expected '(' after while statement.")?;
+        self.consume(TokenType::LeftParen, "Expected '(' after while keyword.")?;
         // Get the condition of the while statement
         let condition = self.expression()?;
         // Consume the closing ')' parenthesis after the condition of the while statement
         self.consume(
-            TokenType::LeftParen,
-            "Expected closing ')' after while statement.",
+            TokenType::RightParen,
+            "Expected closing ')' after while condition.",
         )?;
 
         // Get the while's body

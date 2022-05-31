@@ -20,13 +20,6 @@ fn test_error_variable_already_exists() {
 
         match parser.parse() {
             Ok(stmts) => {
-                /*
-                if let Ok(printed) = printer.print(&expr) {
-                    println!("AST Printer:\n{}", printed);
-                } else {
-                    println!("Unable to parse with LST.");
-                }
-                */
                 match resolver.resolve_stmts(&stmts) {
                     Ok(_) => {}
                     Err(e) => {

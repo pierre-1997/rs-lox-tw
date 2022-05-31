@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::Index;
 use std::rc::Rc;
 
 use crate::environment::Environment;
@@ -183,17 +182,15 @@ impl ExprVisitor<Object> for Interpreter {
         let value = self.evaluate(value)?;
 
         // Try to get the known variable from the locally defined ones.
-        let distance = self.locals.index(name);
-
-        // If we found it, reassign it to the evaluated value
-        if distance > &0 {
+        if let Some(distance) = self.locals.get(name) {
+            // If we found it, reassign it to the evaluated value
             self.environment
                 .borrow_mut()
-                .assign_at(*distance, name.clone(), value.clone());
+                .assign_at(*distance, name, value.clone())?;
         }
         // Else, try to assign it in the globally known variables
         else {
-            self.env_globals.borrow_mut().assign(name, value.clone())?;
+            self.environment.borrow_mut().assign(name, value.clone())?;
         }
 
         Ok(value)

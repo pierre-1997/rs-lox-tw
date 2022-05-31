@@ -90,24 +90,47 @@ impl Environment {
         })
     }
 
+    /**
+     * Gets a variable from the environment that is at depth `distance`.
+     */
     pub fn get_at(&self, distance: usize, name: &Token) -> Result<Object, LoxResult> {
-        self.ancestor(distance).borrow().get(name)
+        // If given a distance, get the corresponding ancestor and try to get the value from it
+        if distance > 0 {
+            self.ancestor(distance).borrow().get(name)
+        }
+        // If no distance, only try to get the value from self.values or return an error
+        else {
+            match self.values.get(&name.lexeme) {
+                Some(val) => Ok(val.clone()),
+                None => Err(LoxResult::Environment {
+                    error_type: EnvironmentErrorType::UnknownVariable,
+                    msg: format!("{} -> No such variable '{}'.", name.location(), name.lexeme),
+                }),
+            }
+        }
     }
 
+    /**
+     * Gets the enclosed environment at depth `distance`.
+     */
     fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
+        // Get the first enclosing env or panic
         let parent = self.enclosing.clone().expect("No ancestor at depth 1.");
+        // Get a reference of that env
         let mut env = Rc::clone(&parent);
-
-        for i in 0..distance {
+        // Get the parent env distance times
+        for i in 1..distance {
+            // Get the parent or panic
             let parent = env
                 .borrow()
                 .enclosing
                 .clone()
                 .unwrap_or_else(|| panic!("No ancestor at depth {i}."));
-
+            // Get the parent as a reference
             env = Rc::clone(&parent);
         }
 
+        // Return the env
         env
     }
 
@@ -127,15 +150,19 @@ impl Environment {
         Err(LoxResult::Environment {
             error_type: EnvironmentErrorType::UnknownVariable,
             msg: format!(
-                "Cannot assign value to unknown variable '{}'.",
+                "{} -> Cannot assign value to unknown variable '{}'.",
+                token.location(),
                 token.lexeme
             ),
         })
     }
 
-    pub fn assign_at(&mut self, distance: usize, name: Token, value: Object) {
-        self.ancestor(distance)
-            .borrow_mut()
-            .define(name.lexeme, value);
+    pub fn assign_at(
+        &mut self,
+        distance: usize,
+        name: &Token,
+        value: Object,
+    ) -> Result<(), LoxResult> {
+        self.ancestor(distance).borrow_mut().assign(name, value)
     }
 }

@@ -1,81 +1,77 @@
-// mod ast_printer;
-// use ast_printer::AstPrinter;
+use rs_lox_tw::errors::LoxResult;
 use rs_lox_tw::interpreter::Interpreter;
 use rs_lox_tw::parser::Parser;
 use rs_lox_tw::resolver::Resolver;
 use rs_lox_tw::scanner::Scanner;
 
-use std::io::{self, Write};
+use std::io::{self, BufRead, Write};
 use std::{env, fs};
+
+struct Lox {
+    interpreter: Interpreter,
+}
+
+impl Lox {
+    fn new() -> Self {
+        Lox {
+            interpreter: Interpreter::new(),
+        }
+    }
+
+    fn run_file(&mut self, path: &str) -> Result<(), LoxResult> {
+        let file_content = fs::read_to_string(path).expect("Unable to read file.");
+        self.run(file_content)
+    }
+
+    fn run_prompt(&mut self) -> Result<(), LoxResult> {
+        // Get an handle on stdin
+        let stdin = io::stdin();
+
+        // Print the prompt
+        print!("> ");
+        std::io::stdout().flush().expect("Unable to flush stdout.");
+        for line in stdin.lock().lines() {
+            // Specialy convert an IO error into a `LoxResult::IOError`
+            match line {
+                Ok(line) => self.run(line)?,
+                Err(_) => return Err(LoxResult::IOError),
+            };
+            // Print the prompt
+            print!("> ");
+            std::io::stdout().flush().expect("Unable to flush stdout.");
+        }
+
+        Ok(())
+    }
+
+    fn run(&mut self, source: String) -> Result<(), LoxResult> {
+        let mut scanner = Scanner::new(&source);
+
+        let tokens = scanner.scan_tokens()?;
+        let mut parser = Parser::new(tokens);
+
+        let statements = parser.parse()?;
+        let mut resolver = Resolver::new(&mut self.interpreter);
+        resolver.resolve_stmts(&statements)?;
+
+        self.interpreter.interpret(&statements)?;
+        Ok(())
+    }
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+
+    let mut lox = Lox::new();
 
     if args.is_empty() || args.len() > 2 {
         eprintln!("Usage: ./rs-lox-tw [script]");
         std::process::exit(64);
     } else if args.len() == 2 {
-        run_file(&args[1]);
-    } else if let Err(e) = run_prompt() {
+        if let Err(e) = lox.run_file(&args[1]) {
+            eprintln!("{}", e);
+        }
+    } else if let Err(e) = lox.run_prompt() {
         eprintln!("{}", e);
-    }
-}
-
-pub fn run_file(path: &str) {
-    let file_content = fs::read_to_string(path).expect("Unable to read file.");
-    run(&file_content);
-}
-
-pub fn run_prompt() -> io::Result<()> {
-    let stdin = std::io::stdin();
-    loop {
-        print!("> ");
-        std::io::stdout().flush().expect("Unable to flush stdout.");
-        let mut buf = String::new();
-        stdin.read_line(&mut buf)?;
-        if buf.is_empty() {
-            continue;
-        }
-        run(&buf);
-    }
-}
-
-pub fn run(source: &str) {
-    let mut scanner = Scanner::new(source);
-    // let printer = AstPrinter;
-    let mut interpreter = Interpreter::new();
-    let mut resolver = Resolver::new(&mut interpreter);
-
-    if let Ok(tokens) = scanner.scan_tokens() {
-        let mut parser = Parser::new(tokens);
-
-        match parser.parse() {
-            Ok(stmts) => {
-                /*
-                if let Ok(printed) = printer.print(&expr) {
-                    println!("AST Printer:\n{}", printed);
-                } else {
-                    println!("Unable to parse with LST.");
-                }
-                */
-                match resolver.resolve_stmts(&stmts) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        eprintln!("{e}");
-                        return;
-                    }
-                }
-
-                match interpreter.interpret(&stmts) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        eprintln!("{}", e)
-                    }
-                }
-            }
-            Err(e) => {
-                eprintln!("There was an error: {}", e)
-            }
-        }
     }
 }
