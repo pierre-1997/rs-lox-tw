@@ -58,15 +58,28 @@ impl LoxCallable for LoxClass {
      */
     fn call(
         &self,
-        _interpreter: &mut Interpreter,
-        _arguments: Vec<Object>,
+        interpreter: &mut Interpreter,
+        arguments: Vec<Object>,
         class: Option<Rc<LoxClass>>,
     ) -> Result<Object, LoxResult> {
-        let instance = LoxInstance::new(&class.unwrap());
-        Ok(Object::Instance(Rc::new(instance)))
+        // Create a new instance from the class declaration
+        let instance = Rc::new(LoxInstance::new(class.as_ref().unwrap()));
+        // If we have a declared init function, bind it to the instance and run it
+        if let Some(init_function) = self.find_method("init") {
+            init_function
+                .bind(&Object::Instance(Rc::clone(&instance)))
+                .call(interpreter, arguments, class)?;
+        }
+        // Return the instance
+        Ok(Object::Instance(instance))
     }
 
     fn arity(&self) -> usize {
+        // Return the arity of the 'init()' function if one was defined
+        if let Some(init_function) = self.find_method("init") {
+            return init_function.arity();
+        }
+        // Otherwise return 0
         0
     }
 }

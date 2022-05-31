@@ -679,6 +679,7 @@ impl StmtVisitor<()> for Interpreter {
             params: params.to_vec(),
             body: body.to_vec(),
             closure: Rc::clone(&self.environment),
+            is_init_function: false,
         }));
 
         // Define the function in the current environment
@@ -708,6 +709,7 @@ impl StmtVisitor<()> for Interpreter {
                     params: params.clone(),
                     body: body.clone(),
                     closure: Rc::clone(&self.environment),
+                    is_init_function: name.lexeme == "init",
                 };
 
                 // Put a `LoxFunction` struct into the hashmap

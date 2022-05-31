@@ -35,6 +35,7 @@ pub enum ResolverErrorType {
     VariableAlreadyExists,
     TopLevelReturn,
     ThisOutsideClass,
+    ReturnFromInit,
 }
 
 #[derive(Debug, PartialEq)]
@@ -188,6 +189,11 @@ impl fmt::Display for LoxResult {
                 ResolverErrorType::ThisOutsideClass => write!(
                     f,
                     "[resolver] {} -> Cannot use 'this' outside a class.",
+                    token.location(),
+                )?,
+                ResolverErrorType::ReturnFromInit => write!(
+                    f,
+                    "[resolver] {} -> Cannot return a value from the init() function.",
                     token.location(),
                 )?,
             },

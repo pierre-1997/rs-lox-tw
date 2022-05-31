@@ -10,6 +10,7 @@ use crate::lox_class::LoxClass;
 use crate::object::Object;
 use crate::stmt::Stmt;
 use crate::token::Token;
+use crate::token_type::TokenType;
 
 #[derive(Clone)]
 pub struct LoxFunction {
@@ -23,6 +24,8 @@ pub struct LoxFunction {
     /// Environment used by the function itself. When defined, takes the values from the
     /// surrounding environment.
     pub closure: Rc<RefCell<Environment>>,
+    /// Tells if this is a class's `init()` function
+    pub is_init_function: bool,
 }
 
 impl LoxFunction {
@@ -44,6 +47,7 @@ impl LoxFunction {
             params: self.params.clone(),
             body: self.body.clone(),
             closure: Rc::new(new_env),
+            is_init_function: self.is_init_function,
         }
     }
 }
@@ -61,17 +65,49 @@ impl LoxCallable for LoxFunction {
         arguments: Vec<Object>,
         _class: Option<Rc<LoxClass>>,
     ) -> Result<Object, LoxResult> {
+        // Create a new environment for the function's scope
         let mut env = Environment::from_enclosing(Rc::clone(&self.closure));
 
+        // Define the function's arguments in the function's env
         for (param, arg) in self.params.iter().zip(arguments.iter()) {
             env.define(param.lexeme.clone(), arg.clone());
         }
 
         // Handle the execution's return
         match interpreter.execute_block(&self.body, Rc::new(RefCell::new(env))) {
-            Err(LoxResult::ReturnValue { value }) => Ok(value),
+            // Returned a value
+            Err(LoxResult::ReturnValue { value }) => {
+                // If we're in a class's init() function, return `this`
+                if self.is_init_function {
+                    return self.closure.borrow_mut().get_at(
+                        0,
+                        &Token {
+                            ttype: TokenType::This,
+                            lexeme: "this".to_string(),
+                            ..Default::default()
+                        },
+                    );
+                }
+                // Else return the value
+                Ok(value)
+            }
+            // Returned an error
             Err(e) => Err(e),
-            Ok(_) => Ok(Object::Nil),
+            // Returned nothing, force return `Object::Nil` in a regular function and
+            // `this` in an init() flass function.
+            Ok(_) => {
+                if self.is_init_function {
+                    return self.closure.borrow_mut().get_at(
+                        0,
+                        &Token {
+                            ttype: TokenType::This,
+                            lexeme: "this".to_string(),
+                            ..Default::default()
+                        },
+                    );
+                }
+                Ok(Object::Nil)
+            }
         }
     }
 

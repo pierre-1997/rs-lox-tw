@@ -13,6 +13,7 @@ enum FunctionType {
     Void,
     Function,
     Method,
+    Init,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -90,6 +91,12 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
             });
         }
         if let Some(value) = value {
+            if self.current_function == FunctionType::Init {
+                return Err(LoxResult::Resolver {
+                    token: keyword.to_owned(),
+                    error_type: ResolverErrorType::ReturnFromInit,
+                });
+            }
             self.resolve_expr(value)?;
         }
 
@@ -141,13 +148,16 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
         for method in methods {
             // Each statement in the 'methods' argument should be of the underlying
             // variant `Stmt::Function`.
-            if let Stmt::Function {
-                name: _,
-                params,
-                body,
-            } = method
-            {
-                self.resolve_function(params, body, FunctionType::Method)?;
+            if let Stmt::Function { name, params, body } = method {
+                self.resolve_function(
+                    params,
+                    body,
+                    if name.lexeme == "init" {
+                        FunctionType::Init
+                    } else {
+                        FunctionType::Method
+                    },
+                )?;
             } else {
                 unreachable!()
             };

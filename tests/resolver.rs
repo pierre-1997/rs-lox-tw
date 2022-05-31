@@ -110,3 +110,40 @@ fn test_invalid_this_in_function() {
         }
     }
 }
+
+#[test]
+fn test_return_from_init() {
+    let source = "class Foo {
+        init() {
+            return true;
+        }
+    }";
+
+    let (mut scanner, mut interpreter) = common::scanner_and_interpreter(source);
+    let mut resolver = Resolver::new(&mut interpreter);
+    if let Ok(tokens) = scanner.scan_tokens() {
+        let mut parser = Parser::new(tokens);
+
+        match parser.parse() {
+            Ok(stmts) => {
+                assert_eq!(
+                    resolver.resolve_stmts(&stmts),
+                    Err(LoxResult::Resolver {
+                        token: Token {
+                            src_end: 0,
+                            ttype: TokenType::Return,
+                            src_line: 0,
+                            src_start: 0,
+                            lexeme: "return".to_string(),
+                            literal: None
+                        },
+                        error_type: ResolverErrorType::ReturnFromInit
+                    })
+                )
+            }
+            Err(e) => {
+                eprintln!("There was an error: {}", e)
+            }
+        }
+    }
+}

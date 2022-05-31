@@ -14,6 +14,19 @@ pub struct Token {
     pub src_end: usize,
 }
 
+impl Default for Token {
+    fn default() -> Self {
+        Self {
+            lexeme: String::new(),
+            literal: None,
+            ttype: TokenType::Eof,
+            src_end: 0,
+            src_line: 0,
+            src_start: 0,
+        }
+    }
+}
+
 impl Hash for Token {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.ttype.hash(state);
