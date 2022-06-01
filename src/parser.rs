@@ -791,10 +791,22 @@ impl<'a> Parser<'a> {
             });
         }
 
-        // Parse True
-        if self.matchs_next(&[TokenType::True]) {
-            return Ok(Expr::Literal {
-                value: Some(Object::True),
+        // Parse an identifier
+        if self.matchs_next(&[TokenType::Identifier]) {
+            return Ok(Expr::Variable {
+                name: self.previous(),
+            });
+        }
+
+        // Parse en parenthesized/group expression
+        if self.matchs_next(&[TokenType::LeftParen]) {
+            // Parse the group enclosed expression
+            let expr = self.expression()?;
+            // Look for the closing ')' after the grouped expression
+            self.consume(TokenType::RightParen, "Expected ')' after expression.")?;
+            // Return the built group expression
+            return Ok(Expr::Grouping {
+                expression: Box::new(expr),
             });
         }
 
@@ -812,6 +824,21 @@ impl<'a> Parser<'a> {
             });
         }
 
+        // Parse the 'super' keyword
+        if self.matchs_next(&[TokenType::Super]) {
+            // Parse the keyword itself
+            let keyword = self.previous();
+            // Expect a following '.'
+            self.consume(TokenType::Dot, "Expected '.' after 'super'.")?;
+            // Parse the expected following method name
+            let method = self.consume(
+                TokenType::Identifier,
+                "Expected superclass method name after '.'.",
+            )?;
+            // Return the built `Expr::Super` variant
+            return Ok(Expr::Super { keyword, method });
+        }
+
         // Parse 'this' keyword
         if self.matchs_next(&[TokenType::This]) {
             return Ok(Expr::This {
@@ -819,22 +846,10 @@ impl<'a> Parser<'a> {
             });
         }
 
-        // Parse an identifier
-        if self.matchs_next(&[TokenType::Identifier]) {
-            return Ok(Expr::Variable {
-                name: self.previous(),
-            });
-        }
-
-        // Parse en parenthesized/group expression
-        if self.matchs_next(&[TokenType::LeftParen]) {
-            // Parse the group enclosed expression
-            let expr = self.expression()?;
-            // Look for the closing ')' after the grouped expression
-            self.consume(TokenType::RightParen, "Expected ')' after expression.")?;
-            // Return the built group expression
-            return Ok(Expr::Grouping {
-                expression: Box::new(expr),
+        // Parse True
+        if self.matchs_next(&[TokenType::True]) {
+            return Ok(Expr::Literal {
+                value: Some(Object::True),
             });
         }
 

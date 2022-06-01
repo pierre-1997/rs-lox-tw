@@ -154,6 +154,14 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
                 unreachable!()
             }
             self.resolve_expr(superclass)?;
+
+            // Define the `super` keyword in a new scope
+            self.begin_scope();
+            self.scopes
+                .borrow_mut()
+                .last_mut()
+                .unwrap()
+                .insert("super".to_string(), true);
         }
 
         // Start the class scope
@@ -186,6 +194,10 @@ impl<'a> StmtVisitor<()> for Resolver<'a> {
 
         // End the class scope
         self.end_scope();
+        // If there was a superclass, close its scope
+        if superclass.is_some() {
+            self.end_scope();
+        }
         // Reset `self.current_class`
         self.current_class = enclosing_class;
 
@@ -290,6 +302,11 @@ impl<'a> ExprVisitor<()> for Resolver<'a> {
                 error_type: ResolverErrorType::ThisOutsideClass,
             });
         }
+        self.resolve_local(keyword);
+        Ok(())
+    }
+
+    fn visit_super_expr(&mut self, keyword: &Token, method: &Token) -> Result<(), LoxResult> {
         self.resolve_local(keyword);
         Ok(())
     }

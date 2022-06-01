@@ -718,6 +718,13 @@ impl StmtVisitor<()> for Interpreter {
             .borrow_mut()
             .define(name.lexeme.clone(), Object::Nil);
 
+        if superclass_obj.is_some() {
+            self.environment = Rc::new(RefCell::new(Environment::from_enclosing(self.environment)));
+            self.environment
+                .borrow_mut()
+                .define("super", superclass_obj.unwrap());
+        }
+
         // Interpret each defined class method into a `LoxFunction` object
         let mut class_methods: HashMap<String, LoxFunction> = HashMap::new();
         for method in methods {
