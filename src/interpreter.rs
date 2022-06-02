@@ -519,6 +519,32 @@ impl ExprVisitor<Object> for Interpreter {
         // Simply lookup a `this` variable as it should currently be defined locally
         self.look_up_variable(keyword)
     }
+
+    fn visit_super_expr(&mut self, keyword: &Token, method: &Token) -> Result<Object, LoxResult> {
+        let distance = self.locals.get(keyword).unwrap();
+        let superclass = self.environment.borrow_mut().get_at(*distance, keyword)?;
+
+        let object = self.environment.borrow_mut().get_at(
+            distance - 1,
+            &Token {
+                lexeme: "this".to_string(),
+                ..Default::default()
+            },
+        )?;
+
+        if let Object::Class(superclass) = superclass {
+            if let Some(class_method) = superclass.find_method(&method.lexeme) {
+                return Ok(Object::Function(Rc::new(class_method.bind(&object))));
+            } else {
+                return Err(LoxResult::Runtime {
+                    token: method.to_owned(),
+                    error_type: RuntimeErrorType::UndefinedProperty,
+                });
+            }
+        }
+
+        unreachable!()
+    }
 }
 
 /**
@@ -718,11 +744,15 @@ impl StmtVisitor<()> for Interpreter {
             .borrow_mut()
             .define(name.lexeme.clone(), Object::Nil);
 
+        // If we have a superclass, define a new environment here
         if superclass_obj.is_some() {
-            self.environment = Rc::new(RefCell::new(Environment::from_enclosing(self.environment)));
-            self.environment
-                .borrow_mut()
-                .define("super", superclass_obj.unwrap());
+            self.environment = Rc::new(RefCell::new(Environment::from_enclosing(Rc::clone(
+                &self.environment,
+            ))));
+            self.environment.borrow_mut().define(
+                "super".to_owned(),
+                Object::Class(Rc::clone(superclass_obj.as_ref().unwrap())),
+            );
         }
 
         // Interpret each defined class method into a `LoxFunction` object
@@ -744,7 +774,10 @@ impl StmtVisitor<()> for Interpreter {
                 unreachable!()
             };
         }
-
+        if superclass_obj.is_some() {
+            let enclosed = self.environment.borrow_mut().enclosing.as_ref().unwrap();
+            self.environment = Rc::clone(&enclosed);
+        }
         // Instanciate a new `Object::Class` containing the name of the classs and its methods
         let class = Object::Class(Rc::new(LoxClass {
             name: name.lexeme.clone(),
