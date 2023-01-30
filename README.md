@@ -1,3 +1,8 @@
+# Rust Lox Tree-Walk Interpreter
+This is the first part of the Crafting Interpreters
+[book](https://craftinginterpreters.com/contents.html). It contains all the code necessary to
+run (by interpreting) `lox` files (see examples in `data/`).
+
 # TODO
 
 - [ ] Feature: Add support for comma expressions (Chapter 6 Challenge 1)
